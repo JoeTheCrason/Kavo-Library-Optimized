@@ -173,6 +173,73 @@ function Kavo.CreateLib(kavName, themeList)
         end
     end
 
+    local function lerpColor(a, b, t)
+        return Color3.new(
+            a.R + (b.R - a.R) * t,
+            a.G + (b.G - a.G) * t,
+            a.B + (b.B - a.B) * t
+        )
+    end
+
+    local function applyGlassSurface(guiObject, opts)
+        opts = opts or {}
+        local radius = opts.radius or 6
+        local setBgTransparency = opts.bgTransparency
+        local strokeTransparency = opts.strokeTransparency or 0.82
+        local strokeThickness = opts.strokeThickness or 1
+
+        if not (guiObject and guiObject:IsA("GuiObject")) then
+            return nil
+        end
+
+        if setBgTransparency ~= nil then
+            guiObject.BackgroundTransparency = setBgTransparency
+        elseif guiObject.BackgroundTransparency == 0 then
+            guiObject.BackgroundTransparency = 0.18
+        end
+
+        local corner = guiObject:FindFirstChild("GlassCorner")
+        if not corner then
+            corner = Instance.new("UICorner")
+            corner.Name = "GlassCorner"
+            corner.Parent = guiObject
+        end
+        corner.CornerRadius = UDim.new(0, radius)
+
+        local stroke = guiObject:FindFirstChild("GlassStroke")
+        if not stroke then
+            stroke = Instance.new("UIStroke")
+            stroke.Name = "GlassStroke"
+            stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+            stroke.Parent = guiObject
+        end
+        stroke.Thickness = strokeThickness
+        stroke.Transparency = strokeTransparency
+
+        local grad = guiObject:FindFirstChild("GlassGradient")
+        if not grad then
+            grad = Instance.new("UIGradient")
+            grad.Name = "GlassGradient"
+            grad.Rotation = 90
+            grad.Parent = guiObject
+        end
+
+        registerThemeUpdater(function()
+            local surface = themeList.ElementColor or Color3.fromRGB(32, 32, 38)
+            local accent = themeList.SchemeColor or Color3.fromRGB(74, 99, 135)
+            stroke.Color = lerpColor(accent, Color3.fromRGB(255, 255, 255), 0.35)
+            local top = lerpColor(surface, Color3.fromRGB(255, 255, 255), 0.10)
+            local bot = lerpColor(surface, Color3.fromRGB(0, 0, 0), 0.10)
+            grad.Color = ColorSequence.new(top, bot)
+            grad.Transparency = NumberSequence.new({
+                NumberSequenceKeypoint.new(0, 0.86),
+                NumberSequenceKeypoint.new(1, 0.96),
+            })
+        end)
+
+        return stroke, grad, corner
+    end
+
     local selectedTab 
     kavName = kavName or "Library"
     table.insert(Kavo, kavName)
@@ -593,6 +660,13 @@ function Kavo.CreateLib(kavName, themeList)
                 updateSectionFrame()
                 UpdateSize()
             local Elements = {}
+            function Elements:UpdateSection(newTitle)
+                if newTitle ~= nil then
+                    sectionName.Text = tostring(newTitle)
+                end
+                updateSectionFrame()
+                UpdateSize()
+            end
             function Elements:NewButton(bname,tipINf, callback)
                 showLogo = showLogo or true
                 local ButtonFunction = {}
@@ -612,6 +686,7 @@ function Kavo.CreateLib(kavName, themeList)
                 buttonElement.Name = bname
                 buttonElement.Parent = sectionInners
                 buttonElement.BackgroundColor3 = themeList.ElementColor
+                buttonElement.BackgroundTransparency = 0.18
                 buttonElement.ClipsDescendants = true
                 buttonElement.Size = UDim2.new(0, 352, 0, 33)
                 buttonElement.AutoButtonColor = false
@@ -623,6 +698,8 @@ function Kavo.CreateLib(kavName, themeList)
 
                 UICorner.CornerRadius = UDim.new(0, 4)
                 UICorner.Parent = buttonElement
+
+                local btnStroke = applyGlassSurface(buttonElement, { radius = 10, bgTransparency = 0.18, strokeTransparency = 0.80 })
 
                 viewInfo.Name = "viewInfo"
                 viewInfo.Parent = buttonElement
@@ -666,6 +743,8 @@ function Kavo.CreateLib(kavName, themeList)
 
                 UICorner.CornerRadius = UDim.new(0, 4)
                 UICorner.Parent = moreInfo
+
+                applyGlassSurface(moreInfo, { radius = 10, bgTransparency = 0.12, strokeTransparency = 0.86, strokeThickness = 1 })
 
                 touch.Name = "touch"
                 touch.Parent = buttonElement
@@ -740,17 +819,27 @@ function Kavo.CreateLib(kavName, themeList)
                 local hovering = false
                 btn.MouseEnter:Connect(function()
                     if not focusing then
-                        game.TweenService:Create(btn, TweenInfo.new(0.1, Enum.EasingStyle.Linear, Enum.EasingDirection.In), {
-                            BackgroundColor3 = Color3.fromRGB(themeList.ElementColor.r * 255 + 8, themeList.ElementColor.g * 255 + 9, themeList.ElementColor.b * 255 + 10)
+                        game.TweenService:Create(btn, TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                            BackgroundTransparency = 0.12
                         }):Play()
+                        if btnStroke then
+                            game.TweenService:Create(btnStroke, TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                                Transparency = 0.72
+                            }):Play()
+                        end
                         hovering = true
                     end
                 end)
                 btn.MouseLeave:Connect(function()
                     if not focusing then 
-                        game.TweenService:Create(btn, TweenInfo.new(0.1, Enum.EasingStyle.Linear, Enum.EasingDirection.In), {
-                            BackgroundColor3 = themeList.ElementColor
+                        game.TweenService:Create(btn, TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                            BackgroundTransparency = 0.18
                         }):Play()
+                        if btnStroke then
+                            game.TweenService:Create(btnStroke, TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                                Transparency = 0.80
+                            }):Play()
+                        end
                         hovering = false
                     end
                 end)
@@ -777,6 +866,7 @@ function Kavo.CreateLib(kavName, themeList)
                 registerThemeUpdater(function()
                     if not hovering then
                         buttonElement.BackgroundColor3 = themeList.ElementColor
+                        buttonElement.BackgroundTransparency = 0.18
                     end
                     viewInfo.ImageColor3 = themeList.SchemeColor
                     Sample.ImageColor3 = themeList.SchemeColor
@@ -807,6 +897,7 @@ function Kavo.CreateLib(kavName, themeList)
                 textboxElement.Name = "textboxElement"
                 textboxElement.Parent = sectionInners
                 textboxElement.BackgroundColor3 = themeList.ElementColor
+                textboxElement.BackgroundTransparency = 0.18
                 textboxElement.ClipsDescendants = true
                 textboxElement.Size = UDim2.new(0, 352, 0, 33)
                 textboxElement.AutoButtonColor = false
@@ -817,6 +908,8 @@ function Kavo.CreateLib(kavName, themeList)
 
                 UICorner.CornerRadius = UDim.new(0, 4)
                 UICorner.Parent = textboxElement
+
+                local tbStroke = applyGlassSurface(textboxElement, { radius = 10, bgTransparency = 0.18, strokeTransparency = 0.80 })
 
                 viewInfo.Name = "viewInfo"
                 viewInfo.Parent = textboxElement
@@ -844,6 +937,7 @@ function Kavo.CreateLib(kavName, themeList)
 
                 TextBox.Parent = textboxElement
                 TextBox.BackgroundColor3 = Color3.fromRGB(themeList.ElementColor.r * 255 - 6, themeList.ElementColor.g * 255 - 6, themeList.ElementColor.b * 255 - 7)
+                TextBox.BackgroundTransparency = 0.10
                 TextBox.BorderSizePixel = 0
                 TextBox.ClipsDescendants = true
                 TextBox.Position = UDim2.new(0.488749921, 0, 0.212121218, 0)
@@ -859,6 +953,8 @@ function Kavo.CreateLib(kavName, themeList)
 
                 UICorner_2.CornerRadius = UDim.new(0, 4)
                 UICorner_2.Parent = TextBox
+
+                applyGlassSurface(TextBox, { radius = 8, bgTransparency = 0.10, strokeTransparency = 0.88, strokeThickness = 1 })
 
                 togName.Name = "togName"
                 togName.Parent = textboxElement
@@ -918,18 +1014,28 @@ function Kavo.CreateLib(kavName, themeList)
                 local hovering = false
                 btn.MouseEnter:Connect(function()
                     if not focusing then
-                        game.TweenService:Create(btn, TweenInfo.new(0.1, Enum.EasingStyle.Linear, Enum.EasingDirection.In), {
-                            BackgroundColor3 = Color3.fromRGB(themeList.ElementColor.r * 255 + 8, themeList.ElementColor.g * 255 + 9, themeList.ElementColor.b * 255 + 10)
+                        game.TweenService:Create(btn, TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                            BackgroundTransparency = 0.12
                         }):Play()
+                        if tbStroke then
+                            game.TweenService:Create(tbStroke, TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                                Transparency = 0.72
+                            }):Play()
+                        end
                         hovering = true
                     end 
                 end)
 
                 btn.MouseLeave:Connect(function()
                     if not focusing then
-                        game.TweenService:Create(btn, TweenInfo.new(0.1, Enum.EasingStyle.Linear, Enum.EasingDirection.In), {
-                            BackgroundColor3 = themeList.ElementColor
+                        game.TweenService:Create(btn, TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                            BackgroundTransparency = 0.18
                         }):Play()
+                        if tbStroke then
+                            game.TweenService:Create(tbStroke, TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                                Transparency = 0.80
+                            }):Play()
+                        end
                         hovering = false
                     end
                 end)
@@ -974,8 +1080,10 @@ function Kavo.CreateLib(kavName, themeList)
                 registerThemeUpdater(function()
                     if not hovering then
                         textboxElement.BackgroundColor3 = themeList.ElementColor
+                        textboxElement.BackgroundTransparency = 0.18
                     end
                     TextBox.BackgroundColor3 = Color3.fromRGB(themeList.ElementColor.r * 255 - 6, themeList.ElementColor.g * 255 - 6, themeList.ElementColor.b * 255 - 7)
+                    TextBox.BackgroundTransparency = 0.10
                     viewInfo.ImageColor3 = themeList.SchemeColor
                     moreInfo.BackgroundColor3 = Color3.fromRGB(themeList.SchemeColor.r * 255 - 14, themeList.SchemeColor.g * 255 - 17, themeList.SchemeColor.b * 255 - 13)
                     moreInfo.TextColor3 = themeList.TextColor
@@ -1005,6 +1113,7 @@ function Kavo.CreateLib(kavName, themeList)
                     toggleElement.Name = "toggleElement"
                     toggleElement.Parent = sectionInners
                     toggleElement.BackgroundColor3 = themeList.ElementColor
+                    toggleElement.BackgroundTransparency = 0.18
                     toggleElement.ClipsDescendants = true
                     toggleElement.Size = UDim2.new(0, 352, 0, 33)
                     toggleElement.AutoButtonColor = false
@@ -1015,6 +1124,8 @@ function Kavo.CreateLib(kavName, themeList)
 
                     UICorner.CornerRadius = UDim.new(0, 4)
                     UICorner.Parent = toggleElement
+
+                    local tStroke = applyGlassSurface(toggleElement, { radius = 10, bgTransparency = 0.18, strokeTransparency = 0.80 })
 
                     toggleDisabled.Name = "toggleDisabled"
                     toggleDisabled.Parent = toggleElement
@@ -1164,17 +1275,27 @@ function Kavo.CreateLib(kavName, themeList)
                     local hovering = false
                     btn.MouseEnter:Connect(function()
                         if not focusing then
-                            game.TweenService:Create(btn, TweenInfo.new(0.1, Enum.EasingStyle.Linear, Enum.EasingDirection.In), {
-                                BackgroundColor3 = Color3.fromRGB(themeList.ElementColor.r * 255 + 8, themeList.ElementColor.g * 255 + 9, themeList.ElementColor.b * 255 + 10)
+                            game.TweenService:Create(btn, TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                                BackgroundTransparency = 0.12
                             }):Play()
+                            if tStroke then
+                                game.TweenService:Create(tStroke, TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                                    Transparency = 0.72
+                                }):Play()
+                            end
                             hovering = true
                         end 
                     end)
                     btn.MouseLeave:Connect(function()
                         if not focusing then
-                            game.TweenService:Create(btn, TweenInfo.new(0.1, Enum.EasingStyle.Linear, Enum.EasingDirection.In), {
-                                BackgroundColor3 = themeList.ElementColor
+                            game.TweenService:Create(btn, TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                                BackgroundTransparency = 0.18
                             }):Play()
+                            if tStroke then
+                                game.TweenService:Create(tStroke, TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                                    Transparency = 0.80
+                                }):Play()
+                            end
                             hovering = false
                         end
                     end)
@@ -1182,6 +1303,7 @@ function Kavo.CreateLib(kavName, themeList)
                     registerThemeUpdater(function()
                         if not hovering then
                             toggleElement.BackgroundColor3 = themeList.ElementColor
+                            toggleElement.BackgroundTransparency = 0.18
                         end
                         toggleDisabled.ImageColor3 = themeList.SchemeColor
                         toggleEnabled.ImageColor3 = themeList.SchemeColor
@@ -1256,6 +1378,7 @@ function Kavo.CreateLib(kavName, themeList)
                 sliderElement.Name = "sliderElement"
                 sliderElement.Parent = sectionInners
                 sliderElement.BackgroundColor3 = themeList.ElementColor
+                sliderElement.BackgroundTransparency = 0.18
                 sliderElement.ClipsDescendants = true
                 sliderElement.Size = UDim2.new(0, 352, 0, 33)
                 sliderElement.AutoButtonColor = false
@@ -1266,6 +1389,8 @@ function Kavo.CreateLib(kavName, themeList)
 
                 UICorner.CornerRadius = UDim.new(0, 4)
                 UICorner.Parent = sliderElement
+
+                local sStroke = applyGlassSurface(sliderElement, { radius = 10, bgTransparency = 0.18, strokeTransparency = 0.80 })
 
                 togName.Name = "togName"
                 togName.Parent = sliderElement
@@ -1295,6 +1420,7 @@ function Kavo.CreateLib(kavName, themeList)
                 sliderBtn.Name = "sliderBtn"
                 sliderBtn.Parent = sliderElement
                 sliderBtn.BackgroundColor3 = Color3.fromRGB(themeList.ElementColor.r * 255 + 5, themeList.ElementColor.g * 255 + 5, themeList.ElementColor.b * 255  + 5)
+                sliderBtn.BackgroundTransparency = 0.15
                 sliderBtn.BorderSizePixel = 0
                 sliderBtn.Position = UDim2.new(0.488749951, 0, 0.393939406, 0)
                 sliderBtn.Size = UDim2.new(0, 149, 0, 6)
@@ -1305,6 +1431,8 @@ function Kavo.CreateLib(kavName, themeList)
                 sliderBtn.TextSize = 14.000
 
                 UICorner_2.Parent = sliderBtn
+
+                applyGlassSurface(sliderBtn, { radius = 10, bgTransparency = 0.15, strokeTransparency = 0.90, strokeThickness = 1 })
 
                 UIListLayout.Parent = sliderBtn
                 UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
@@ -1382,17 +1510,27 @@ function Kavo.CreateLib(kavName, themeList)
                 local hovering = false
                 btn.MouseEnter:Connect(function()
                     if not focusing then
-                        game.TweenService:Create(btn, TweenInfo.new(0.1, Enum.EasingStyle.Linear, Enum.EasingDirection.In), {
-                            BackgroundColor3 = Color3.fromRGB(themeList.ElementColor.r * 255 + 8, themeList.ElementColor.g * 255 + 9, themeList.ElementColor.b * 255 + 10)
+                        game.TweenService:Create(btn, TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                            BackgroundTransparency = 0.12
                         }):Play()
+                        if sStroke then
+                            game.TweenService:Create(sStroke, TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                                Transparency = 0.72
+                            }):Play()
+                        end
                         hovering = true
                     end 
                 end)
                 btn.MouseLeave:Connect(function()
                     if not focusing then
-                        game.TweenService:Create(btn, TweenInfo.new(0.1, Enum.EasingStyle.Linear, Enum.EasingDirection.In), {
-                            BackgroundColor3 = themeList.ElementColor
+                        game.TweenService:Create(btn, TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                            BackgroundTransparency = 0.18
                         }):Play()
+                        if sStroke then
+                            game.TweenService:Create(sStroke, TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                                Transparency = 0.80
+                            }):Play()
+                        end
                         hovering = false
                     end
                 end)        
@@ -1400,6 +1538,7 @@ function Kavo.CreateLib(kavName, themeList)
                 registerThemeUpdater(function()
                     if not hovering then
                         sliderElement.BackgroundColor3 = themeList.ElementColor
+                        sliderElement.BackgroundTransparency = 0.18
                     end
                     moreInfo.TextColor3 = themeList.TextColor
                     moreInfo.BackgroundColor3 = Color3.fromRGB(themeList.SchemeColor.r * 255 - 14, themeList.SchemeColor.g * 255 - 17, themeList.SchemeColor.b * 255 - 13)
@@ -1408,6 +1547,7 @@ function Kavo.CreateLib(kavName, themeList)
                     togName.TextColor3 = themeList.TextColor
                     viewInfo.ImageColor3 = themeList.SchemeColor
                     sliderBtn.BackgroundColor3 = Color3.fromRGB(themeList.ElementColor.r * 255 + 5, themeList.ElementColor.g * 255 + 5, themeList.ElementColor.b * 255  + 5)
+                    sliderBtn.BackgroundTransparency = 0.15
                     sliderDrag.BackgroundColor3 = themeList.SchemeColor
                 end)
 
@@ -1507,6 +1647,7 @@ function Kavo.CreateLib(kavName, themeList)
                 dropFrame.Name = "dropFrame"
                 dropFrame.Parent = sectionInners
                 dropFrame.BackgroundColor3 = themeList.Background
+                dropFrame.BackgroundTransparency = 1
                 dropFrame.BorderSizePixel = 0
                 dropFrame.Position = UDim2.new(0, 0, 1.23571432, 0)
                 dropFrame.Size = UDim2.new(0, 352, 0, 33)
@@ -1516,6 +1657,7 @@ function Kavo.CreateLib(kavName, themeList)
                 dropOpen.Name = "dropOpen"
                 dropOpen.Parent = dropFrame
                 dropOpen.BackgroundColor3 = themeList.ElementColor
+                dropOpen.BackgroundTransparency = 0.18
                 dropOpen.Size = UDim2.new(0, 352, 0, 33)
                 dropOpen.AutoButtonColor = false
                 dropOpen.Font = Enum.Font.SourceSans
@@ -1523,6 +1665,8 @@ function Kavo.CreateLib(kavName, themeList)
                 dropOpen.TextColor3 = Color3.fromRGB(0, 0, 0)
                 dropOpen.TextSize = 14.000
                 dropOpen.ClipsDescendants = true
+
+                local dStroke = applyGlassSurface(dropOpen, { radius = 10, bgTransparency = 0.18, strokeTransparency = 0.80 })
                 dropOpen.MouseButton1Click:Connect(function()
                     if not focusing then
                         if opened then
@@ -1659,23 +1803,34 @@ function Kavo.CreateLib(kavName, themeList)
                 local hovering = false
                 btn.MouseEnter:Connect(function()
                     if not focusing then
-                        game.TweenService:Create(btn, TweenInfo.new(0.1, Enum.EasingStyle.Linear, Enum.EasingDirection.In), {
-                            BackgroundColor3 = Color3.fromRGB(themeList.ElementColor.r * 255 + 8, themeList.ElementColor.g * 255 + 9, themeList.ElementColor.b * 255 + 10)
+                        game.TweenService:Create(btn, TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                            BackgroundTransparency = 0.12
                         }):Play()
+                        if dStroke then
+                            game.TweenService:Create(dStroke, TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                                Transparency = 0.72
+                            }):Play()
+                        end
                         hovering = true
                     end 
                 end)
                 btn.MouseLeave:Connect(function()
                     if not focusing then
-                        game.TweenService:Create(btn, TweenInfo.new(0.1, Enum.EasingStyle.Linear, Enum.EasingDirection.In), {
-                            BackgroundColor3 = themeList.ElementColor
+                        game.TweenService:Create(btn, TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                            BackgroundTransparency = 0.18
                         }):Play()
+                        if dStroke then
+                            game.TweenService:Create(dStroke, TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                                Transparency = 0.80
+                            }):Play()
+                        end
                         hovering = false
                     end
                 end)        
                 registerThemeUpdater(function()
                     if not hovering then
                         dropOpen.BackgroundColor3 = themeList.ElementColor
+                        dropOpen.BackgroundTransparency = 0.18
                     end
                     Sample.ImageColor3 = themeList.SchemeColor
                     dropFrame.BackgroundColor3 = themeList.Background
@@ -1735,6 +1890,7 @@ function Kavo.CreateLib(kavName, themeList)
                     optionSelect.Name = "optionSelect"
                     optionSelect.Parent = dropFrame
                     optionSelect.BackgroundColor3 = themeList.ElementColor
+                    optionSelect.BackgroundTransparency = 0.18
                     optionSelect.Position = UDim2.new(0, 0, 0.235294119, 0)
                     optionSelect.Size = UDim2.new(0, 352, 0, 33)
                     optionSelect.AutoButtonColor = false
@@ -1781,26 +1937,39 @@ function Kavo.CreateLib(kavName, themeList)
                     UICorner_2.CornerRadius = UDim.new(0, 4)
                     UICorner_2.Parent = optionSelect
 
+                    local oStroke = applyGlassSurface(optionSelect, { radius = 10, bgTransparency = 0.18, strokeTransparency = 0.86 })
+
                     local oHover = false
                     optionSelect.MouseEnter:Connect(function()
                         if not focusing then
-                            game.TweenService:Create(optionSelect, TweenInfo.new(0.1, Enum.EasingStyle.Linear, Enum.EasingDirection.In), {
-                                BackgroundColor3 = Color3.fromRGB(themeList.ElementColor.r * 255 + 8, themeList.ElementColor.g * 255 + 9, themeList.ElementColor.b * 255 + 10)
+                            game.TweenService:Create(optionSelect, TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                                BackgroundTransparency = 0.12
                             }):Play()
+                            if oStroke then
+                                game.TweenService:Create(oStroke, TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                                    Transparency = 0.78
+                                }):Play()
+                            end
                             oHover = true
                         end 
                     end)
                     optionSelect.MouseLeave:Connect(function()
                         if not focusing then
-                            game.TweenService:Create(optionSelect, TweenInfo.new(0.1, Enum.EasingStyle.Linear, Enum.EasingDirection.In), {
-                                BackgroundColor3 = themeList.ElementColor
+                            game.TweenService:Create(optionSelect, TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                                BackgroundTransparency = 0.18
                             }):Play()
+                            if oStroke then
+                                game.TweenService:Create(oStroke, TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                                    Transparency = 0.86
+                                }):Play()
+                            end
                             oHover = false
                         end
                     end)   
                     registerThemeUpdater(function()
                         if not oHover then
                             optionSelect.BackgroundColor3 = themeList.ElementColor
+                            optionSelect.BackgroundTransparency = 0.18
                         end
                         optionSelect.TextColor3 = Color3.fromRGB(themeList.TextColor.r * 255 - 6, themeList.TextColor.g * 255 - 6, themeList.TextColor.b * 255 - 6)
                         Sample1.ImageColor3 = themeList.SchemeColor
@@ -1832,6 +2001,7 @@ function Kavo.CreateLib(kavName, themeList)
                         optionSelect.Name = "optionSelect"
                         optionSelect.Parent = dropFrame
                         optionSelect.BackgroundColor3 = themeList.ElementColor
+                        optionSelect.BackgroundTransparency = 0.18
                         optionSelect.Position = UDim2.new(0, 0, 0.235294119, 0)
                         optionSelect.Size = UDim2.new(0, 352, 0, 33)
                         optionSelect.AutoButtonColor = false
@@ -1843,6 +2013,8 @@ function Kavo.CreateLib(kavName, themeList)
                         optionSelect.ClipsDescendants = true
                         UICorner_2.CornerRadius = UDim.new(0, 4)
                         UICorner_2.Parent = optionSelect
+
+                        local oStroke2 = applyGlassSurface(optionSelect, { radius = 10, bgTransparency = 0.18, strokeTransparency = 0.86 })
                         optionSelect.MouseButton1Click:Connect(function()
                             if not focusing then
                                 opened = false
@@ -1881,23 +2053,34 @@ function Kavo.CreateLib(kavName, themeList)
                         local hov = false
                         optionSelect.MouseEnter:Connect(function()
                             if not focusing then
-                                game.TweenService:Create(optionSelect, TweenInfo.new(0.1, Enum.EasingStyle.Linear, Enum.EasingDirection.In), {
-                                    BackgroundColor3 = Color3.fromRGB(themeList.ElementColor.r * 255 + 8, themeList.ElementColor.g * 255 + 9, themeList.ElementColor.b * 255 + 10)
+                                game.TweenService:Create(optionSelect, TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                                    BackgroundTransparency = 0.12
                                 }):Play()
+                                if oStroke2 then
+                                    game.TweenService:Create(oStroke2, TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                                        Transparency = 0.78
+                                    }):Play()
+                                end
                                 hov = true
                             end 
                         end)
                         optionSelect.MouseLeave:Connect(function()
                             if not focusing then
-                                game.TweenService:Create(optionSelect, TweenInfo.new(0.1, Enum.EasingStyle.Linear, Enum.EasingDirection.In), {
-                                    BackgroundColor3 = themeList.ElementColor
+                                game.TweenService:Create(optionSelect, TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                                    BackgroundTransparency = 0.18
                                 }):Play()
+                                if oStroke2 then
+                                    game.TweenService:Create(oStroke2, TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                                        Transparency = 0.86
+                                    }):Play()
+                                end
                                 hov = false
                             end
                         end)   
                         registerThemeUpdater(function()
                             if not oHover then
                                 optionSelect.BackgroundColor3 = themeList.ElementColor
+                                optionSelect.BackgroundTransparency = 0.18
                             end
                             optionSelect.TextColor3 = Color3.fromRGB(themeList.TextColor.r * 255 - 6, themeList.TextColor.g * 255 - 6, themeList.TextColor.b * 255 - 6)
                             Sample11.ImageColor3 = themeList.SchemeColor
@@ -1942,6 +2125,7 @@ function Kavo.CreateLib(kavName, themeList)
                 keybindElement.Name = "keybindElement"
                 keybindElement.Parent = sectionInners
                 keybindElement.BackgroundColor3 = themeList.ElementColor
+                keybindElement.BackgroundTransparency = 0.18
                 keybindElement.ClipsDescendants = true
                 keybindElement.Size = UDim2.new(0, 352, 0, 33)
                 keybindElement.AutoButtonColor = false
@@ -2060,17 +2244,27 @@ function Kavo.CreateLib(kavName, themeList)
                 local oHover = false
                 keybindElement.MouseEnter:Connect(function()
                     if not focusing then
-                        game.TweenService:Create(keybindElement, TweenInfo.new(0.1, Enum.EasingStyle.Linear, Enum.EasingDirection.In), {
-                            BackgroundColor3 = Color3.fromRGB(themeList.ElementColor.r * 255 + 8, themeList.ElementColor.g * 255 + 9, themeList.ElementColor.b * 255 + 10)
+                        game.TweenService:Create(keybindElement, TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                            BackgroundTransparency = 0.12
                         }):Play()
+                        if kStroke then
+                            game.TweenService:Create(kStroke, TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                                Transparency = 0.72
+                            }):Play()
+                        end
                         oHover = true
                     end 
                 end)
                 keybindElement.MouseLeave:Connect(function()
                     if not focusing then
-                        game.TweenService:Create(keybindElement, TweenInfo.new(0.1, Enum.EasingStyle.Linear, Enum.EasingDirection.In), {
-                            BackgroundColor3 = themeList.ElementColor
+                        game.TweenService:Create(keybindElement, TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                            BackgroundTransparency = 0.18
                         }):Play()
+                        if kStroke then
+                            game.TweenService:Create(kStroke, TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                                Transparency = 0.80
+                            }):Play()
+                        end
                         oHover = false
                     end
                 end)        
@@ -2087,6 +2281,8 @@ function Kavo.CreateLib(kavName, themeList)
 
                 UICorner.CornerRadius = UDim.new(0, 4)
                 UICorner.Parent = keybindElement
+
+                local kStroke = applyGlassSurface(keybindElement, { radius = 10, bgTransparency = 0.18, strokeTransparency = 0.80 })
 
                 touch.Name = "touch"
                 touch.Parent = keybindElement
@@ -2115,6 +2311,7 @@ function Kavo.CreateLib(kavName, themeList)
                 registerThemeUpdater(function()
                     if not oHover then
                         keybindElement.BackgroundColor3 = themeList.ElementColor
+                        keybindElement.BackgroundTransparency = 0.18
                     end
                     togName_2.TextColor3 = themeList.SchemeColor
                     touch.ImageColor3 = themeList.SchemeColor
@@ -2240,11 +2437,16 @@ function Kavo.CreateLib(kavName, themeList)
                 UICorner.CornerRadius = UDim.new(0, 4)
                 UICorner.Parent = colorElement
 
+                applyGlassSurface(colorElement, { radius = 10, bgTransparency = 1, strokeTransparency = 1, strokeThickness = 0 })
+
                 colorHeader.Name = "colorHeader"
                 colorHeader.Parent = colorElement
                 colorHeader.BackgroundColor3 = themeList.ElementColor
+                colorHeader.BackgroundTransparency = 0.18
                 colorHeader.Size = UDim2.new(0, 352, 0, 33)
                 colorHeader.ClipsDescendants = true
+
+                local cStroke = applyGlassSurface(colorHeader, { radius = 10, bgTransparency = 0.18, strokeTransparency = 0.80 })
 
                 UICorner_2.CornerRadius = UDim.new(0, 4)
                 UICorner_2.Parent = colorHeader
@@ -2341,11 +2543,14 @@ function Kavo.CreateLib(kavName, themeList)
                 colorInners.Name = "colorInners"
                 colorInners.Parent = colorElement
                 colorInners.BackgroundColor3 = themeList.ElementColor
+                colorInners.BackgroundTransparency = 0.14
                 colorInners.Position = UDim2.new(0, 0, 0.255319148, 0)
                 colorInners.Size = UDim2.new(0, 352, 0, 105)
 
                 UICorner_4.CornerRadius = UDim.new(0, 4)
                 UICorner_4.Parent = colorInners
+
+                applyGlassSurface(colorInners, { radius = 10, bgTransparency = 0.14, strokeTransparency = 0.86, strokeThickness = 1 })
 
                 rgb.Name = "rgb"
                 rgb.Parent = colorInners
@@ -2446,17 +2651,27 @@ function Kavo.CreateLib(kavName, themeList)
 
                 colorElement.MouseEnter:Connect(function()
                     if not focusing then
-                        game.TweenService:Create(colorElement, TweenInfo.new(0.1, Enum.EasingStyle.Linear, Enum.EasingDirection.In), {
-                            BackgroundColor3 = Color3.fromRGB(themeList.ElementColor.r * 255 + 8, themeList.ElementColor.g * 255 + 9, themeList.ElementColor.b * 255 + 10)
+                        game.TweenService:Create(colorHeader, TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                            BackgroundTransparency = 0.12
                         }):Play()
+                        if cStroke then
+                            game.TweenService:Create(cStroke, TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                                Transparency = 0.72
+                            }):Play()
+                        end
                         hovering = true
                     end 
                 end)
                 colorElement.MouseLeave:Connect(function()
                     if not focusing then
-                        game.TweenService:Create(colorElement, TweenInfo.new(0.1, Enum.EasingStyle.Linear, Enum.EasingDirection.In), {
-                            BackgroundColor3 = themeList.ElementColor
+                        game.TweenService:Create(colorHeader, TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                            BackgroundTransparency = 0.18
                         }):Play()
+                        if cStroke then
+                            game.TweenService:Create(cStroke, TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                                Transparency = 0.80
+                            }):Play()
+                        end
                         hovering = false
                     end
                 end)        
@@ -2469,15 +2684,17 @@ function Kavo.CreateLib(kavName, themeList)
                 end 
                 registerThemeUpdater(function()
                     if not hovering then
-                        colorElement.BackgroundColor3 = themeList.ElementColor
+                        colorHeader.BackgroundTransparency = 0.18
                     end
                     touch.ImageColor3 = themeList.SchemeColor
                     colorHeader.BackgroundColor3 = themeList.ElementColor
+                    colorHeader.BackgroundTransparency = 0.18
                     togName.TextColor3 = themeList.TextColor
                     moreInfo.BackgroundColor3 = Color3.fromRGB(themeList.SchemeColor.r * 255 - 14, themeList.SchemeColor.g * 255 - 17, themeList.SchemeColor.b * 255 - 13)
                     moreInfo.TextColor3 = themeList.TextColor
                     viewInfo.ImageColor3 = themeList.SchemeColor
                     colorInners.BackgroundColor3 = themeList.ElementColor
+                    colorInners.BackgroundTransparency = 0.14
                     toggleDisabled.ImageColor3 = themeList.SchemeColor
                     toggleEnabled.ImageColor3 = themeList.SchemeColor
                     togName_2.TextColor3 = themeList.TextColor
@@ -2599,7 +2816,8 @@ function Kavo.CreateLib(kavName, themeList)
             	local UICorner = Instance.new("UICorner")
             	label.Name = "label"
             	label.Parent = sectionInners
-            	label.BackgroundColor3 = themeList.SchemeColor
+            	label.BackgroundColor3 = themeList.ElementColor
+                label.BackgroundTransparency = 0.18
             	label.BorderSizePixel = 0
 				label.ClipsDescendants = true
             	label.Text = title
@@ -2614,6 +2832,8 @@ function Kavo.CreateLib(kavName, themeList)
 	            
 	           	UICorner.CornerRadius = UDim.new(0, 4)
                 UICorner.Parent = label
+
+                applyGlassSurface(label, { radius = 10, bgTransparency = 0.18, strokeTransparency = 0.82 })
             	
 	            if themeList.SchemeColor == Color3.fromRGB(255,255,255) then
 	                Utility:TweenObject(label, {TextColor3 = Color3.fromRGB(0,0,0)}, 0.2)
@@ -2623,7 +2843,8 @@ function Kavo.CreateLib(kavName, themeList)
 	            end 
 
 		        registerThemeUpdater(function()
-		            label.BackgroundColor3 = themeList.SchemeColor
+		            label.BackgroundColor3 = themeList.ElementColor
+                    label.BackgroundTransparency = 0.18
 		            label.TextColor3 = themeList.TextColor
 		        end)
                 updateSectionFrame()
