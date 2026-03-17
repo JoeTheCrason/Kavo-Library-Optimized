@@ -159,16 +159,21 @@ function Kavo.CreateLib(kavName, themeList)
 
     local themeUpdaters = {}
     local function registerThemeUpdater(fn)
+        if type(fn) ~= "function" then
+            return
+        end
         table.insert(themeUpdaters, fn)
         fn()
     end
     local function refreshTheme()
         for _, fn in ipairs(themeUpdaters) do
-            fn()
+            if type(fn) == "function" then
+                fn()
+            end
         end
     end
 
-Y    local selectedTab 
+    local selectedTab 
     kavName = kavName or "Library"
     table.insert(Kavo, kavName)
     for i,v in pairs(game.CoreGui:GetChildren()) do
