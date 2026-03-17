@@ -1,145 +1,152 @@
 --[[
-    Kavo UI Library — Modernized
-    Redesign: cleaner layout, refined color system, smoother animations,
-    lighter element geometry, improved scrollbars, and a more consistent theme engine.
+    Kavo UI Library — Modernized (Positioning Fixed)
+    Fixes applied:
+      - All centering now uses AnchorPoint instead of manual offset math
+      - LayoutOrder set on all UIListLayout children
+      - Icon/label/button vertical centering uses AnchorPoint(0, 0.5)
+      - Close button / right-anchored elements use AnchorPoint(1, 0.5)
+      - Ripple uses AnchorPoint(0.5, 0.5) — no manual -sz/2 needed
+      - ScreenGui.IgnoreGuiInset = true to prevent 36px top shift
+      - SectionFrame children have explicit LayoutOrder (header=1, inners=2)
+      - All UIListLayout children have explicit LayoutOrder counters
 --]]
 
 local Kavo = {}
 
-local TweenService   = game:GetService("TweenService")
+local TweenService     = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
-local RunService     = game:GetService("RunService")
 
--- ── Tween helpers ──────────────────────────────────────────────────────────────
 local function Tween(obj, props, t, style, dir)
     style = style or Enum.EasingStyle.Quart
     dir   = dir   or Enum.EasingDirection.Out
     TweenService:Create(obj, TweenInfo.new(t, style, dir), props):Play()
 end
 
--- ── Theme definitions ──────────────────────────────────────────────────────────
+-- ── Themes ────────────────────────────────────────────────────────────────────
 local Themes = {
     Default = {
-        Accent      = Color3.fromRGB(99,  102, 241),   -- indigo
-        Background  = Color3.fromRGB(14,  14,  20),
-        Surface     = Color3.fromRGB(20,  20,  28),
-        Element     = Color3.fromRGB(30,  30,  40),
-        ElementHov  = Color3.fromRGB(40,  40,  52),
-        Border      = Color3.fromRGB(50,  52,  68),
-        Text        = Color3.fromRGB(220, 225, 240),
-        TextMuted   = Color3.fromRGB(100, 110, 135),
-        ScrollBar   = Color3.fromRGB(60,  62,  80),
+        Accent     = Color3.fromRGB(99,  102, 241),
+        Background = Color3.fromRGB(14,  14,  20),
+        Surface    = Color3.fromRGB(20,  20,  28),
+        Element    = Color3.fromRGB(30,  30,  40),
+        ElementHov = Color3.fromRGB(40,  40,  52),
+        Border     = Color3.fromRGB(50,  52,  68),
+        Text       = Color3.fromRGB(220, 225, 240),
+        TextMuted  = Color3.fromRGB(100, 110, 135),
+        ScrollBar  = Color3.fromRGB(60,  62,  80),
     },
     Ocean = {
-        Accent      = Color3.fromRGB(56,  189, 248),
-        Background  = Color3.fromRGB(10,  18,  34),
-        Surface     = Color3.fromRGB(15,  25,  45),
-        Element     = Color3.fromRGB(22,  35,  60),
-        ElementHov  = Color3.fromRGB(30,  48,  78),
-        Border      = Color3.fromRGB(40,  60,  95),
-        Text        = Color3.fromRGB(200, 220, 245),
-        TextMuted   = Color3.fromRGB(80,  110, 155),
-        ScrollBar   = Color3.fromRGB(50,  80,  130),
+        Accent     = Color3.fromRGB(56,  189, 248),
+        Background = Color3.fromRGB(10,  18,  34),
+        Surface    = Color3.fromRGB(15,  25,  45),
+        Element    = Color3.fromRGB(22,  35,  60),
+        ElementHov = Color3.fromRGB(30,  48,  78),
+        Border     = Color3.fromRGB(40,  60,  95),
+        Text       = Color3.fromRGB(200, 220, 245),
+        TextMuted  = Color3.fromRGB(80,  110, 155),
+        ScrollBar  = Color3.fromRGB(50,  80,  130),
     },
     Crimson = {
-        Accent      = Color3.fromRGB(239, 68,  68),
-        Background  = Color3.fromRGB(14,  10,  10),
-        Surface     = Color3.fromRGB(22,  14,  14),
-        Element     = Color3.fromRGB(34,  20,  20),
-        ElementHov  = Color3.fromRGB(46,  26,  26),
-        Border      = Color3.fromRGB(70,  35,  35),
-        Text        = Color3.fromRGB(240, 215, 215),
-        TextMuted   = Color3.fromRGB(130, 80,  80),
-        ScrollBar   = Color3.fromRGB(90,  45,  45),
+        Accent     = Color3.fromRGB(239, 68,  68),
+        Background = Color3.fromRGB(14,  10,  10),
+        Surface    = Color3.fromRGB(22,  14,  14),
+        Element    = Color3.fromRGB(34,  20,  20),
+        ElementHov = Color3.fromRGB(46,  26,  26),
+        Border     = Color3.fromRGB(70,  35,  35),
+        Text       = Color3.fromRGB(240, 215, 215),
+        TextMuted  = Color3.fromRGB(130, 80,  80),
+        ScrollBar  = Color3.fromRGB(90,  45,  45),
     },
     Jade = {
-        Accent      = Color3.fromRGB(52,  211, 153),
-        Background  = Color3.fromRGB(8,   16,  14),
-        Surface     = Color3.fromRGB(12,  24,  20),
-        Element     = Color3.fromRGB(18,  34,  28),
-        ElementHov  = Color3.fromRGB(25,  46,  38),
-        Border      = Color3.fromRGB(38,  70,  56),
-        Text        = Color3.fromRGB(190, 240, 220),
-        TextMuted   = Color3.fromRGB(80,  145, 115),
-        ScrollBar   = Color3.fromRGB(50,  100, 80),
+        Accent     = Color3.fromRGB(52,  211, 153),
+        Background = Color3.fromRGB(8,   16,  14),
+        Surface    = Color3.fromRGB(12,  24,  20),
+        Element    = Color3.fromRGB(18,  34,  28),
+        ElementHov = Color3.fromRGB(25,  46,  38),
+        Border     = Color3.fromRGB(38,  70,  56),
+        Text       = Color3.fromRGB(190, 240, 220),
+        TextMuted  = Color3.fromRGB(80,  145, 115),
+        ScrollBar  = Color3.fromRGB(50,  100, 80),
     },
     Grape = {
-        Accent      = Color3.fromRGB(168, 85,  247),
-        Background  = Color3.fromRGB(14,  10,  20),
-        Surface     = Color3.fromRGB(22,  16,  32),
-        Element     = Color3.fromRGB(32,  22,  46),
-        ElementHov  = Color3.fromRGB(44,  30,  60),
-        Border      = Color3.fromRGB(65,  44,  95),
-        Text        = Color3.fromRGB(230, 215, 255),
-        TextMuted   = Color3.fromRGB(120, 90,  165),
-        ScrollBar   = Color3.fromRGB(80,  55,  120),
+        Accent     = Color3.fromRGB(168, 85,  247),
+        Background = Color3.fromRGB(14,  10,  20),
+        Surface    = Color3.fromRGB(22,  16,  32),
+        Element    = Color3.fromRGB(32,  22,  46),
+        ElementHov = Color3.fromRGB(44,  30,  60),
+        Border     = Color3.fromRGB(65,  44,  95),
+        Text       = Color3.fromRGB(230, 215, 255),
+        TextMuted  = Color3.fromRGB(120, 90,  165),
+        ScrollBar  = Color3.fromRGB(80,  55,  120),
     },
     Slate = {
-        Accent      = Color3.fromRGB(148, 163, 184),
-        Background  = Color3.fromRGB(10,  12,  16),
-        Surface     = Color3.fromRGB(18,  20,  26),
-        Element     = Color3.fromRGB(28,  30,  40),
-        ElementHov  = Color3.fromRGB(38,  42,  54),
-        Border      = Color3.fromRGB(55,  60,  78),
-        Text        = Color3.fromRGB(210, 215, 230),
-        TextMuted   = Color3.fromRGB(90,  100, 125),
-        ScrollBar   = Color3.fromRGB(65,  72,  95),
+        Accent     = Color3.fromRGB(148, 163, 184),
+        Background = Color3.fromRGB(10,  12,  16),
+        Surface    = Color3.fromRGB(18,  20,  26),
+        Element    = Color3.fromRGB(28,  30,  40),
+        ElementHov = Color3.fromRGB(38,  42,  54),
+        Border     = Color3.fromRGB(55,  60,  78),
+        Text       = Color3.fromRGB(210, 215, 230),
+        TextMuted  = Color3.fromRGB(90,  100, 125),
+        ScrollBar  = Color3.fromRGB(65,  72,  95),
     },
     Amber = {
-        Accent      = Color3.fromRGB(251, 191, 36),
-        Background  = Color3.fromRGB(14,  12,  8),
-        Surface     = Color3.fromRGB(22,  18,  10),
-        Element     = Color3.fromRGB(34,  28,  14),
-        ElementHov  = Color3.fromRGB(46,  38,  18),
-        Border      = Color3.fromRGB(70,  58,  24),
-        Text        = Color3.fromRGB(245, 235, 195),
-        TextMuted   = Color3.fromRGB(140, 120, 60),
-        ScrollBar   = Color3.fromRGB(95,  78,  30),
+        Accent     = Color3.fromRGB(251, 191, 36),
+        Background = Color3.fromRGB(14,  12,  8),
+        Surface    = Color3.fromRGB(22,  18,  10),
+        Element    = Color3.fromRGB(34,  28,  14),
+        ElementHov = Color3.fromRGB(46,  38,  18),
+        Border     = Color3.fromRGB(70,  58,  24),
+        Text       = Color3.fromRGB(245, 235, 195),
+        TextMuted  = Color3.fromRGB(140, 120, 60),
+        ScrollBar  = Color3.fromRGB(95,  78,  30),
     },
     Rose = {
-        Accent      = Color3.fromRGB(244, 114, 182),
-        Background  = Color3.fromRGB(15,  10,  14),
-        Surface     = Color3.fromRGB(24,  16,  22),
-        Element     = Color3.fromRGB(36,  22,  32),
-        ElementHov  = Color3.fromRGB(50,  30,  44),
-        Border      = Color3.fromRGB(80,  46,  68),
-        Text        = Color3.fromRGB(245, 215, 235),
-        TextMuted   = Color3.fromRGB(140, 88,  120),
-        ScrollBar   = Color3.fromRGB(95,  55,  80),
+        Accent     = Color3.fromRGB(244, 114, 182),
+        Background = Color3.fromRGB(15,  10,  14),
+        Surface    = Color3.fromRGB(24,  16,  22),
+        Element    = Color3.fromRGB(36,  22,  32),
+        ElementHov = Color3.fromRGB(50,  30,  44),
+        Border     = Color3.fromRGB(80,  46,  68),
+        Text       = Color3.fromRGB(245, 215, 235),
+        TextMuted  = Color3.fromRGB(140, 88,  120),
+        ScrollBar  = Color3.fromRGB(95,  55,  80),
     },
 }
 
--- Resolve a theme by name or table
 local function resolveTheme(input)
     if type(input) == "string" then
         return Themes[input] or Themes.Default
     elseif type(input) == "table" then
-        -- Allow partial overrides
         local base = {}
-        for k,v in pairs(Themes.Default) do base[k] = v end
-        for k,v in pairs(input) do base[k] = v end
+        for k, v in pairs(Themes.Default) do base[k] = v end
+        for k, v in pairs(input)          do base[k] = v end
         return base
     end
     return Themes.Default
 end
 
--- ── Ripple helper ──────────────────────────────────────────────────────────────
+-- ── Helpers ───────────────────────────────────────────────────────────────────
 local function ripple(parent, theme)
-    local ms   = game.Players.LocalPlayer:GetMouse()
-    local rip  = Instance.new("ImageLabel")
-    rip.Parent             = parent
+    local ms  = game.Players.LocalPlayer:GetMouse()
+    local rip = Instance.new("ImageLabel")
+    rip.Parent                 = parent
     rip.BackgroundTransparency = 1
-    rip.Image              = "http://www.roblox.com/asset/?id=4560909609"
-    rip.ImageColor3        = theme.Accent
-    rip.ImageTransparency  = 0.72
-    rip.Size               = UDim2.fromOffset(0, 0)
-    local x = ms.X - parent.AbsolutePosition.X
-    local y = ms.Y - parent.AbsolutePosition.Y
-    rip.Position = UDim2.fromOffset(x, y)
+    rip.Image                  = "http://www.roblox.com/asset/?id=4560909609"
+    rip.ImageColor3            = theme.Accent
+    rip.ImageTransparency      = 0.72
+    -- FIX: AnchorPoint(0.5,0.5) so TweenSizeAndPosition expands from the click center
+    --      without needing manual -sz/2 offset arithmetic
+    rip.AnchorPoint            = Vector2.new(0.5, 0.5)
+    rip.Size                   = UDim2.fromOffset(0, 0)
+    rip.Position               = UDim2.fromOffset(
+        ms.X - parent.AbsolutePosition.X,
+        ms.Y - parent.AbsolutePosition.Y
+    )
     local sz = math.max(parent.AbsoluteSize.X, parent.AbsoluteSize.Y) * 1.6
     rip:TweenSizeAndPosition(
         UDim2.fromOffset(sz, sz),
-        UDim2.new(0.5, -sz/2, 0.5, -sz/2),
+        UDim2.new(0.5, 0, 0.5, 0),
         "Out", "Quad", 0.38, true
     )
     for i = 1, 10 do
@@ -149,7 +156,6 @@ local function ripple(parent, theme)
     rip:Destroy()
 end
 
--- ── Corner helper ──────────────────────────────────────────────────────────────
 local function corner(parent, radius)
     local c = Instance.new("UICorner")
     c.CornerRadius = UDim.new(0, radius or 8)
@@ -159,141 +165,143 @@ end
 
 local function stroke(parent, color, thickness)
     local s = Instance.new("UIStroke")
-    s.Color     = color
-    s.Thickness = thickness or 1
+    s.Color           = color
+    s.Thickness       = thickness or 1
     s.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-    s.Parent = parent
+    s.Parent          = parent
     return s
 end
 
--- ── Library name (unique per load) ────────────────────────────────────────────
 local LibName = tostring(math.random(1000, 9999)) .. "_KavoMod"
 
--- ── Config persistence ─────────────────────────────────────────────────────────
-local ConfigName = "KavoModernConfig.json"
 local SavedSettings = {}
 pcall(function()
-    if not pcall(function() readfile(ConfigName) end) then
-        writefile(ConfigName, game:GetService("HttpService"):JSONEncode(SavedSettings))
+    local name = "KavoModernConfig.json"
+    if not pcall(function() readfile(name) end) then
+        writefile(name, game:GetService("HttpService"):JSONEncode(SavedSettings))
     end
-    SavedSettings = game:GetService("HttpService"):JSONDecode(readfile(ConfigName))
+    SavedSettings = game:GetService("HttpService"):JSONDecode(readfile(name))
 end)
 
--- ── Toggle visibility ──────────────────────────────────────────────────────────
 function Kavo:ToggleUI()
     local gui = game.CoreGui:FindFirstChild(LibName)
     if gui then gui.Enabled = not gui.Enabled end
 end
 
 -- ══════════════════════════════════════════════════════════════════════════════
---  CreateLib
--- ══════════════════════════════════════════════════════════════════════════════
 function Kavo.CreateLib(libName, themeInput)
     libName = libName or "Script"
     local theme = resolveTheme(themeInput)
 
-    -- Clean up old instances
     for _, v in ipairs(game.CoreGui:GetChildren()) do
         if v:IsA("ScreenGui") and v.Name == LibName then v:Destroy() end
     end
 
-    -- ── ScreenGui ──────────────────────────────────────────────────────────────
     local ScreenGui = Instance.new("ScreenGui")
-    ScreenGui.Name           = LibName
-    ScreenGui.Parent         = game.CoreGui
-    ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-    ScreenGui.ResetOnSpawn   = false
+    ScreenGui.Name            = LibName
+    ScreenGui.Parent          = game.CoreGui
+    ScreenGui.ZIndexBehavior  = Enum.ZIndexBehavior.Sibling
+    ScreenGui.ResetOnSpawn    = false
+    -- FIX: Disable the 36px GUI inset so Position(0.5,0,0.5,0) truly means screen center
+    ScreenGui.IgnoreGuiInset  = true
 
     -- ── Main window ───────────────────────────────────────────────────────────
     local Main = Instance.new("Frame")
-    Main.Name            = "Main"
-    Main.Parent          = ScreenGui
+    Main.Name             = "Main"
+    Main.Parent           = ScreenGui
     Main.BackgroundColor3 = theme.Background
-    Main.Size            = UDim2.fromOffset(540, 330)
-    Main.Position        = UDim2.new(0.5, -270, 0.5, -165)
     Main.ClipsDescendants = true
+    -- FIX: AnchorPoint(0.5,0.5) + Position(0.5,0,0.5,0) centers on ANY resolution.
+    --      The old pattern UDim2.new(0.5,-270,0.5,-165) only works at exactly 1080p.
+    Main.AnchorPoint      = Vector2.new(0.5, 0.5)
+    Main.Position         = UDim2.new(0.5, 0, 0.5, 0)
+    Main.Size             = UDim2.fromOffset(540, 330)
     corner(Main, 10)
     stroke(Main, theme.Border)
 
-    -- Open animation
+    -- Open animation: scale from zero, AnchorPoint keeps it centered during tween
     Main.Size = UDim2.fromOffset(0, 0)
-    Main.Position = UDim2.new(0.5, 0, 0.5, 0)
-    Tween(Main, {
-        Size     = UDim2.fromOffset(540, 330),
-        Position = UDim2.new(0.5, -270, 0.5, -165),
-    }, 0.3)
+    Tween(Main, {Size = UDim2.fromOffset(540, 330)}, 0.3)
 
     -- ── Title bar ─────────────────────────────────────────────────────────────
     local TitleBar = Instance.new("Frame")
-    TitleBar.Name            = "TitleBar"
-    TitleBar.Parent          = Main
+    TitleBar.Name             = "TitleBar"
+    TitleBar.Parent           = Main
     TitleBar.BackgroundColor3 = theme.Surface
-    TitleBar.Size            = UDim2.new(1, 0, 0, 32)
+    TitleBar.Size             = UDim2.new(1, 0, 0, 32)
+    TitleBar.Position         = UDim2.new(0, 0, 0, 0)
     corner(TitleBar, 10)
 
-    -- Cover the bottom corners of the rounded titlebar
+    -- Cover the bottom rounded corners of the titlebar
     local TitleCover = Instance.new("Frame")
-    TitleCover.Parent          = TitleBar
-    TitleCover.BackgroundColor3 = theme.Surface
-    TitleCover.BorderSizePixel = 0
-    TitleCover.Position        = UDim2.new(0, 0, 0.6, 0)
-    TitleCover.Size            = UDim2.new(1, 0, 0.5, 0)
+    TitleCover.Parent             = TitleBar
+    TitleCover.BackgroundColor3   = theme.Surface
+    TitleCover.BorderSizePixel    = 0
+    -- FIX: AnchorPoint(0,1) at Position(0,1,0,0) snaps it flush to the bottom edge
+    TitleCover.AnchorPoint        = Vector2.new(0, 1)
+    TitleCover.Position           = UDim2.new(0, 0, 1, 0)
+    TitleCover.Size               = UDim2.new(1, 0, 0.5, 0)
 
-    -- Bottom border on titlebar
+    -- Bottom divider line
     local TitleDivider = Instance.new("Frame")
-    TitleDivider.Name            = "TitleDivider"
-    TitleDivider.Parent          = TitleBar
+    TitleDivider.Name             = "TitleDivider"
+    TitleDivider.Parent           = TitleBar
     TitleDivider.BackgroundColor3 = theme.Border
-    TitleDivider.BorderSizePixel = 0
-    TitleDivider.Position        = UDim2.new(0, 0, 1, -1)
-    TitleDivider.Size            = UDim2.new(1, 0, 0, 1)
+    TitleDivider.BorderSizePixel  = 0
+    -- FIX: AnchorPoint(0,1) at Position(0,1,0,0) pins it to the very bottom
+    TitleDivider.AnchorPoint      = Vector2.new(0, 1)
+    TitleDivider.Position         = UDim2.new(0, 0, 1, 0)
+    TitleDivider.Size             = UDim2.new(1, 0, 0, 1)
 
-    -- Accent dot
+    -- Accent dot — FIX: AnchorPoint(0,0.5) + Y=0.5 to vertically center in titlebar
     local AccentDot = Instance.new("Frame")
-    AccentDot.Parent          = TitleBar
-    AccentDot.BackgroundColor3 = theme.Accent
-    AccentDot.Size            = UDim2.fromOffset(6, 6)
-    AccentDot.Position        = UDim2.new(0, 13, 0.5, -3)
+    AccentDot.Parent             = TitleBar
+    AccentDot.BackgroundColor3   = theme.Accent
+    AccentDot.AnchorPoint        = Vector2.new(0, 0.5)
+    AccentDot.Position           = UDim2.new(0, 13, 0.5, 0)
+    AccentDot.Size               = UDim2.fromOffset(6, 6)
     corner(AccentDot, 3)
 
     local TitleLabel = Instance.new("TextLabel")
-    TitleLabel.Parent            = TitleBar
+    TitleLabel.Parent                 = TitleBar
     TitleLabel.BackgroundTransparency = 1
-    TitleLabel.Position          = UDim2.new(0, 26, 0, 0)
-    TitleLabel.Size              = UDim2.new(1, -60, 1, 0)
-    TitleLabel.Font              = Enum.Font.GothamMedium
-    TitleLabel.Text              = libName
-    TitleLabel.TextColor3        = theme.Text
-    TitleLabel.TextSize          = 13
-    TitleLabel.TextXAlignment    = Enum.TextXAlignment.Left
-    TitleLabel.RichText          = true
+    TitleLabel.Position               = UDim2.new(0, 26, 0, 0)
+    TitleLabel.Size                   = UDim2.new(1, -60, 1, 0)
+    TitleLabel.Font                   = Enum.Font.GothamMedium
+    TitleLabel.Text                   = libName
+    TitleLabel.TextColor3             = theme.Text
+    TitleLabel.TextSize               = 13
+    TitleLabel.TextXAlignment         = Enum.TextXAlignment.Left
+    TitleLabel.RichText               = true
 
-    -- Close button
+    -- Close button — FIX: AnchorPoint(1,0.5) anchors to right-center; no manual -30 offset
     local CloseBtn = Instance.new("ImageButton")
-    CloseBtn.Parent              = TitleBar
-    CloseBtn.BackgroundColor3    = theme.Element
-    CloseBtn.Position            = UDim2.new(1, -30, 0.5, -11)
-    CloseBtn.Size                = UDim2.fromOffset(22, 22)
-    CloseBtn.Image               = "rbxassetid://3926305904"
-    CloseBtn.ImageColor3         = theme.TextMuted
-    CloseBtn.ImageRectOffset     = Vector2.new(284, 4)
-    CloseBtn.ImageRectSize       = Vector2.new(24, 24)
-    CloseBtn.AutoButtonColor     = false
+    CloseBtn.Parent           = TitleBar
+    CloseBtn.BackgroundColor3 = theme.Element
+    CloseBtn.AnchorPoint      = Vector2.new(1, 0.5)
+    CloseBtn.Position         = UDim2.new(1, -8, 0.5, 0)
+    CloseBtn.Size             = UDim2.fromOffset(22, 22)
+    CloseBtn.Image            = "rbxassetid://3926305904"
+    CloseBtn.ImageColor3      = theme.TextMuted
+    CloseBtn.ImageRectOffset  = Vector2.new(284, 4)
+    CloseBtn.ImageRectSize    = Vector2.new(24, 24)
+    CloseBtn.AutoButtonColor  = false
     corner(CloseBtn, 6)
 
     CloseBtn.MouseEnter:Connect(function()
-        Tween(CloseBtn, {BackgroundColor3 = Color3.fromRGB(200, 50, 50), ImageColor3 = Color3.fromRGB(255,255,255)}, 0.15)
+        Tween(CloseBtn, {BackgroundColor3 = Color3.fromRGB(200,50,50), ImageColor3 = Color3.fromRGB(255,255,255)}, 0.15)
     end)
     CloseBtn.MouseLeave:Connect(function()
         Tween(CloseBtn, {BackgroundColor3 = theme.Element, ImageColor3 = theme.TextMuted}, 0.15)
     end)
     CloseBtn.MouseButton1Click:Connect(function()
-        Tween(Main, {Size = UDim2.fromOffset(0, 0), Position = UDim2.new(0.5,0,0.5,0)}, 0.22)
+        -- FIX: Just shrink — AnchorPoint handles centering during the tween
+        Tween(Main, {Size = UDim2.fromOffset(0, 0)}, 0.22)
         task.wait(0.25)
         ScreenGui:Destroy()
     end)
 
-    -- Dragging
+    -- Dragging (Position.Scale stays at 0.5; only Offset changes)
     do
         local dragging, dragInput, mousePos, framePos = false
         TitleBar.InputBegan:Connect(function(inp)
@@ -302,16 +310,12 @@ function Kavo.CreateLib(libName, themeInput)
                 mousePos = inp.Position
                 framePos = Main.Position
                 inp.Changed:Connect(function()
-                    if inp.UserInputState == Enum.UserInputState.End then
-                        dragging = false
-                    end
+                    if inp.UserInputState == Enum.UserInputState.End then dragging = false end
                 end)
             end
         end)
         TitleBar.InputChanged:Connect(function(inp)
-            if inp.UserInputType == Enum.UserInputType.MouseMovement then
-                dragInput = inp
-            end
+            if inp.UserInputType == Enum.UserInputType.MouseMovement then dragInput = inp end
         end)
         UserInputService.InputChanged:Connect(function(inp)
             if inp == dragInput and dragging then
@@ -326,125 +330,127 @@ function Kavo.CreateLib(libName, themeInput)
 
     -- ── Sidebar ───────────────────────────────────────────────────────────────
     local Sidebar = Instance.new("Frame")
-    Sidebar.Name            = "Sidebar"
-    Sidebar.Parent          = Main
+    Sidebar.Name             = "Sidebar"
+    Sidebar.Parent           = Main
     Sidebar.BackgroundColor3 = theme.Surface
-    Sidebar.Position        = UDim2.new(0, 0, 0, 32)
-    Sidebar.Size            = UDim2.new(0, 148, 1, -32)
+    Sidebar.Position         = UDim2.new(0, 0, 0, 32)
+    Sidebar.Size             = UDim2.new(0, 148, 1, -32)
 
-    -- Right border on sidebar
+    -- Right divider — FIX: AnchorPoint(1,0) + Position(1,0,0,0) pins to right edge
     local SideDivider = Instance.new("Frame")
-    SideDivider.Parent          = Sidebar
-    SideDivider.BackgroundColor3 = theme.Border
-    SideDivider.BorderSizePixel = 0
-    SideDivider.Position        = UDim2.new(1, -1, 0, 0)
-    SideDivider.Size            = UDim2.new(0, 1, 1, 0)
+    SideDivider.Parent             = Sidebar
+    SideDivider.BackgroundColor3   = theme.Border
+    SideDivider.BorderSizePixel    = 0
+    SideDivider.AnchorPoint        = Vector2.new(1, 0)
+    SideDivider.Position           = UDim2.new(1, 0, 0, 0)
+    SideDivider.Size               = UDim2.new(0, 1, 1, 0)
 
     local TabContainer = Instance.new("Frame")
-    TabContainer.Parent          = Sidebar
+    TabContainer.Parent                 = Sidebar
     TabContainer.BackgroundTransparency = 1
-    TabContainer.Position        = UDim2.new(0, 8, 0, 8)
-    TabContainer.Size            = UDim2.new(1, -16, 1, -16)
+    TabContainer.Position               = UDim2.new(0, 8, 0, 8)
+    TabContainer.Size                   = UDim2.new(1, -16, 1, -16)
 
     local TabLayout = Instance.new("UIListLayout")
-    TabLayout.Parent      = TabContainer
-    TabLayout.SortOrder   = Enum.SortOrder.LayoutOrder
-    TabLayout.Padding     = UDim.new(0, 3)
+    TabLayout.Parent    = TabContainer
+    TabLayout.SortOrder = Enum.SortOrder.LayoutOrder
+    TabLayout.Padding   = UDim.new(0, 3)
 
-    -- ── Pages area ────────────────────────────────────────────────────────────
+    -- ── Pages ─────────────────────────────────────────────────────────────────
     local PagesHolder = Instance.new("Frame")
-    PagesHolder.Name            = "PagesHolder"
-    PagesHolder.Parent          = Main
+    PagesHolder.Name                   = "PagesHolder"
+    PagesHolder.Parent                 = Main
     PagesHolder.BackgroundTransparency = 1
-    PagesHolder.Position        = UDim2.new(0, 148, 0, 32)
-    PagesHolder.Size            = UDim2.new(1, -148, 1, -64)
+    PagesHolder.Position               = UDim2.new(0, 148, 0, 32)
+    PagesHolder.Size                   = UDim2.new(1, -148, 1, -64)
 
-    -- ── Info bar (tooltip strip) ──────────────────────────────────────────────
+    -- ── Info bar ──────────────────────────────────────────────────────────────
     local InfoBar = Instance.new("Frame")
-    InfoBar.Name            = "InfoBar"
-    InfoBar.Parent          = Main
+    InfoBar.Name             = "InfoBar"
+    InfoBar.Parent           = Main
     InfoBar.BackgroundColor3 = theme.Surface
-    InfoBar.Position        = UDim2.new(0, 148, 1, -32)
-    InfoBar.Size            = UDim2.new(1, -148, 0, 32)
+    -- FIX: AnchorPoint(0,1) + Position(0,148,1,0) pins flush to the bottom of Main
+    InfoBar.AnchorPoint      = Vector2.new(0, 1)
+    InfoBar.Position         = UDim2.new(0, 148, 1, 0)
+    InfoBar.Size             = UDim2.new(1, -148, 0, 32)
 
     local InfoDivider = Instance.new("Frame")
-    InfoDivider.Parent          = InfoBar
-    InfoDivider.BackgroundColor3 = theme.Border
-    InfoDivider.BorderSizePixel = 0
-    InfoDivider.Size            = UDim2.new(1, 0, 0, 1)
+    InfoDivider.Parent             = InfoBar
+    InfoDivider.BackgroundColor3   = theme.Border
+    InfoDivider.BorderSizePixel    = 0
+    InfoDivider.Size               = UDim2.new(1, 0, 0, 1)
 
     local BlurFrame = Instance.new("Frame")
-    BlurFrame.Parent          = PagesHolder
-    BlurFrame.BackgroundColor3 = Color3.new(0, 0, 0)
+    BlurFrame.Parent                 = PagesHolder
+    BlurFrame.BackgroundColor3       = Color3.new(0, 0, 0)
     BlurFrame.BackgroundTransparency = 1
-    BlurFrame.Size            = UDim2.new(1, 0, 1, 0)
-    BlurFrame.ZIndex          = 50
+    BlurFrame.Size                   = UDim2.new(1, 0, 1, 0)
+    BlurFrame.ZIndex                 = 50
 
-    -- Theme updater coroutine
+    -- Theme sync
     task.spawn(function()
         while task.wait(0) do
-            Main.BackgroundColor3        = theme.Background
-            TitleBar.BackgroundColor3    = theme.Surface
-            TitleCover.BackgroundColor3  = theme.Surface
+            Main.BackgroundColor3         = theme.Background
+            TitleBar.BackgroundColor3     = theme.Surface
+            TitleCover.BackgroundColor3   = theme.Surface
             TitleDivider.BackgroundColor3 = theme.Border
-            AccentDot.BackgroundColor3   = theme.Accent
-            TitleLabel.TextColor3        = theme.Text
-            Sidebar.BackgroundColor3     = theme.Surface
-            SideDivider.BackgroundColor3 = theme.Border
-            InfoBar.BackgroundColor3     = theme.Surface
-            InfoDivider.BackgroundColor3 = theme.Border
+            AccentDot.BackgroundColor3    = theme.Accent
+            TitleLabel.TextColor3         = theme.Text
+            Sidebar.BackgroundColor3      = theme.Surface
+            SideDivider.BackgroundColor3  = theme.Border
+            InfoBar.BackgroundColor3      = theme.Surface
+            InfoDivider.BackgroundColor3  = theme.Border
         end
     end)
 
-    -- ── ChangeColor ───────────────────────────────────────────────────────────
     function Kavo:ChangeColor(key, color)
-        if theme[key] ~= nil then
-            theme[key] = color
-        end
+        if theme[key] ~= nil then theme[key] = color end
     end
 
     -- ══════════════════════════════════════════════════════════════════════════
-    local Tabs = {}
+    local Tabs     = {}
     local firstTab = true
+    local tabOrder = 0
 
     function Tabs:NewTab(tabName)
-        tabName = tabName or "Tab"
+        tabName  = tabName or "Tab"
+        tabOrder = tabOrder + 1
 
-        -- Tab button
         local TabBtn = Instance.new("TextButton")
-        TabBtn.Parent          = TabContainer
-        TabBtn.BackgroundColor3 = theme.Element
+        TabBtn.Parent                = TabContainer
+        TabBtn.BackgroundColor3      = theme.Element
         TabBtn.BackgroundTransparency = 1
-        TabBtn.Size            = UDim2.new(1, 0, 0, 30)
-        TabBtn.Font            = Enum.Font.GothamMedium
-        TabBtn.Text            = tabName
-        TabBtn.TextColor3      = theme.TextMuted
-        TabBtn.TextSize        = 13
-        TabBtn.AutoButtonColor = false
+        TabBtn.Size                  = UDim2.new(1, 0, 0, 30)
+        TabBtn.Font                  = Enum.Font.GothamMedium
+        TabBtn.Text                  = tabName
+        TabBtn.TextColor3            = theme.TextMuted
+        TabBtn.TextSize              = 13
+        TabBtn.AutoButtonColor       = false
+        TabBtn.LayoutOrder           = tabOrder   -- FIX: deterministic sort
         corner(TabBtn, 7)
 
-        -- Indicator bar (left edge of active tab)
+        -- Active indicator bar — FIX: AnchorPoint(0,0.5) centers it vertically
         local TabIndicator = Instance.new("Frame")
-        TabIndicator.Parent          = TabBtn
-        TabIndicator.BackgroundColor3 = theme.Accent
+        TabIndicator.Parent                 = TabBtn
+        TabIndicator.BackgroundColor3       = theme.Accent
         TabIndicator.BackgroundTransparency = 1
-        TabIndicator.BorderSizePixel = 0
-        TabIndicator.Position        = UDim2.new(0, 0, 0.2, 0)
-        TabIndicator.Size            = UDim2.fromOffset(3, 0)
+        TabIndicator.BorderSizePixel        = 0
+        TabIndicator.AnchorPoint            = Vector2.new(0, 0.5)
+        TabIndicator.Position               = UDim2.new(0, 0, 0.5, 0)
+        TabIndicator.Size                   = UDim2.new(0, 3, 0, 0)
         corner(TabIndicator, 2)
 
-        -- Page scroll frame
         local Page = Instance.new("ScrollingFrame")
-        Page.Name               = "Page_"..tabName
-        Page.Parent             = PagesHolder
+        Page.Name                  = "Page_"..tabName
+        Page.Parent                = PagesHolder
         Page.BackgroundTransparency = 1
-        Page.BorderSizePixel    = 0
-        Page.Size               = UDim2.new(1, 0, 1, 0)
-        Page.ScrollBarThickness = 3
-        Page.ScrollBarImageColor3 = theme.ScrollBar
-        Page.ScrollingDirection = Enum.ScrollingDirection.Y
-        Page.CanvasSize         = UDim2.fromOffset(0, 0)
-        Page.Visible            = false
+        Page.BorderSizePixel       = 0
+        Page.Size                  = UDim2.new(1, 0, 1, 0)
+        Page.ScrollBarThickness    = 3
+        Page.ScrollBarImageColor3  = theme.ScrollBar
+        Page.ScrollingDirection    = Enum.ScrollingDirection.Y
+        Page.CanvasSize            = UDim2.fromOffset(0, 0)
+        Page.Visible               = false
 
         local PageLayout = Instance.new("UIListLayout")
         PageLayout.Parent    = Page
@@ -452,35 +458,30 @@ function Kavo.CreateLib(libName, themeInput)
         PageLayout.Padding   = UDim.new(0, 6)
 
         local PagePadding = Instance.new("UIPadding")
-        PagePadding.Parent     = Page
-        PagePadding.PaddingTop = UDim.new(0, 10)
-        PagePadding.PaddingLeft = UDim.new(0, 10)
-        PagePadding.PaddingRight = UDim.new(0, 10)
+        PagePadding.Parent        = Page
+        PagePadding.PaddingTop    = UDim.new(0, 10)
+        PagePadding.PaddingLeft   = UDim.new(0, 10)
+        PagePadding.PaddingRight  = UDim.new(0, 10)
 
         local function updateCanvas()
-            local cs = PageLayout.AbsoluteContentSize
-            Page.CanvasSize = UDim2.fromOffset(0, cs.Y + 20)
+            Page.CanvasSize = UDim2.fromOffset(0, PageLayout.AbsoluteContentSize.Y + 20)
         end
         PageLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(updateCanvas)
 
         local function activateTab()
-            -- Hide all pages, deactivate all tab buttons
             for _, pg in ipairs(PagesHolder:GetChildren()) do
                 if pg:IsA("ScrollingFrame") then pg.Visible = false end
             end
             for _, btn in ipairs(TabContainer:GetChildren()) do
                 if btn:IsA("TextButton") then
                     Tween(btn, {TextColor3 = theme.TextMuted, BackgroundTransparency = 1}, 0.18)
-                    local ind = btn:FindFirstChild("Frame")
-                    if ind then Tween(ind, {BackgroundTransparency = 1, Size = UDim2.fromOffset(3, 0)}, 0.18) end
+                    local ind = btn:FindFirstChildOfClass("Frame")
+                    if ind then Tween(ind, {BackgroundTransparency = 1, Size = UDim2.new(0,3,0,0)}, 0.18) end
                 end
             end
             Page.Visible = true
             Tween(TabBtn, {TextColor3 = theme.Text, BackgroundTransparency = 0.85}, 0.18)
-            Tween(TabIndicator, {
-                BackgroundTransparency = 0,
-                Size = UDim2.new(0, 3, 0.6, 0)
-            }, 0.2)
+            Tween(TabIndicator, {BackgroundTransparency = 0, Size = UDim2.new(0,3,0.6,0)}, 0.2)
         end
 
         if firstTab then
@@ -490,77 +491,78 @@ function Kavo.CreateLib(libName, themeInput)
 
         TabBtn.MouseButton1Click:Connect(activateTab)
         TabBtn.MouseEnter:Connect(function()
-            if TabBtn.BackgroundTransparency > 0.5 then
-                Tween(TabBtn, {BackgroundTransparency = 0.92}, 0.12)
-            end
+            if TabBtn.BackgroundTransparency > 0.5 then Tween(TabBtn, {BackgroundTransparency = 0.92}, 0.12) end
         end)
         TabBtn.MouseLeave:Connect(function()
-            if TabBtn.BackgroundTransparency > 0.5 then
-                Tween(TabBtn, {BackgroundTransparency = 1}, 0.12)
-            end
+            if TabBtn.BackgroundTransparency > 0.5 then Tween(TabBtn, {BackgroundTransparency = 1}, 0.12) end
         end)
-
-        -- Theme sync
         task.spawn(function()
             while task.wait(0) do
-                TabBtn.BackgroundColor3      = theme.Element
-                Page.ScrollBarImageColor3    = theme.ScrollBar
+                TabBtn.BackgroundColor3       = theme.Element
+                TabIndicator.BackgroundColor3 = theme.Accent
+                Page.ScrollBarImageColor3     = theme.ScrollBar
             end
         end)
 
-        -- ════════════════════════════════════════════════════════════════════
         local Sections = {}
+        local secOrder  = 0
 
         function Sections:NewSection(secName, hidden)
-            secName = secName or "Section"
-            hidden  = hidden or false
+            secName  = secName or "Section"
+            hidden   = hidden or false
+            secOrder = secOrder + 1
 
             local SectionFrame = Instance.new("Frame")
-            SectionFrame.Parent          = Page
+            SectionFrame.Parent                 = Page
             SectionFrame.BackgroundTransparency = 1
-            SectionFrame.Size            = UDim2.new(1, 0, 0, 0)
+            SectionFrame.Size                   = UDim2.new(1, 0, 0, 0)
+            SectionFrame.LayoutOrder            = secOrder  -- FIX: explicit order
 
             local SecLayout = Instance.new("UIListLayout")
             SecLayout.Parent    = SectionFrame
             SecLayout.SortOrder = Enum.SortOrder.LayoutOrder
             SecLayout.Padding   = UDim.new(0, 4)
 
-            -- Section header
+            -- FIX: LayoutOrder = 1 guarantees header always appears above element container
             local SecHeader = Instance.new("Frame")
-            SecHeader.Name            = "SecHeader"
-            SecHeader.Parent          = SectionFrame
-            SecHeader.BackgroundColor3 = theme.Accent
+            SecHeader.Name                   = "SecHeader"
+            SecHeader.Parent                 = SectionFrame
+            SecHeader.BackgroundColor3       = theme.Accent
             SecHeader.BackgroundTransparency = 0.88
-            SecHeader.Size            = UDim2.new(1, 0, 0, 26)
-            SecHeader.Visible         = not hidden
+            SecHeader.Size                   = UDim2.new(1, 0, 0, 26)
+            SecHeader.Visible                = not hidden
+            SecHeader.LayoutOrder            = 1
             corner(SecHeader, 7)
 
+            -- FIX: AnchorPoint(0,0.5) vertically centers the bar — no manual Y offset
             local SecAccentBar = Instance.new("Frame")
-            SecAccentBar.Parent          = SecHeader
-            SecAccentBar.BackgroundColor3 = theme.Accent
-            SecAccentBar.BorderSizePixel = 0
-            SecAccentBar.Position        = UDim2.new(0, 0, 0.15, 0)
-            SecAccentBar.Size            = UDim2.fromOffset(3, 0)
-            Tween(SecAccentBar, {Size = UDim2.new(0, 3, 0.7, 0)}, 0.25)
+            SecAccentBar.Parent             = SecHeader
+            SecAccentBar.BackgroundColor3   = theme.Accent
+            SecAccentBar.BorderSizePixel    = 0
+            SecAccentBar.AnchorPoint        = Vector2.new(0, 0.5)
+            SecAccentBar.Position           = UDim2.new(0, 0, 0.5, 0)
+            SecAccentBar.Size               = UDim2.new(0, 3, 0, 0)
             corner(SecAccentBar, 2)
+            Tween(SecAccentBar, {Size = UDim2.new(0, 3, 0.65, 0)}, 0.25)
 
             local SecLabel = Instance.new("TextLabel")
-            SecLabel.Parent          = SecHeader
+            SecLabel.Parent                 = SecHeader
             SecLabel.BackgroundTransparency = 1
-            SecLabel.Position        = UDim2.new(0, 12, 0, 0)
-            SecLabel.Size            = UDim2.new(1, -12, 1, 0)
-            SecLabel.Font            = Enum.Font.GothamMedium
-            SecLabel.Text            = secName
-            SecLabel.RichText        = true
-            SecLabel.TextColor3      = theme.Text
-            SecLabel.TextSize        = 12
-            SecLabel.TextXAlignment  = Enum.TextXAlignment.Left
+            SecLabel.Position               = UDim2.new(0, 12, 0, 0)
+            SecLabel.Size                   = UDim2.new(1, -12, 1, 0)
+            SecLabel.Font                   = Enum.Font.GothamMedium
+            SecLabel.Text                   = secName
+            SecLabel.RichText               = true
+            SecLabel.TextColor3             = theme.Text
+            SecLabel.TextSize               = 12
+            SecLabel.TextXAlignment         = Enum.TextXAlignment.Left
 
-            -- Element container
+            -- FIX: LayoutOrder = 2 guarantees element container always appears below header
             local SecInners = Instance.new("Frame")
-            SecInners.Parent          = SectionFrame
+            SecInners.Parent                 = SectionFrame
             SecInners.BackgroundTransparency = 1
-            SecInners.Size            = UDim2.new(1, 0, 0, 0)
+            SecInners.Size                   = UDim2.new(1, 0, 0, 0)
+            SecInners.LayoutOrder            = 2
 
             local InnerLayout = Instance.new("UIListLayout")
             InnerLayout.Parent    = SecInners
@@ -568,24 +570,20 @@ function Kavo.CreateLib(libName, themeInput)
             InnerLayout.Padding   = UDim.new(0, 4)
 
             local function syncSizes()
-                local cs = InnerLayout.AbsoluteContentSize
-                SecInners.Size    = UDim2.new(1, 0, 0, cs.Y)
-                local scs = SecLayout.AbsoluteContentSize
-                SectionFrame.Size = UDim2.new(1, 0, 0, scs.Y)
+                SecInners.Size    = UDim2.new(1, 0, 0, InnerLayout.AbsoluteContentSize.Y)
+                SectionFrame.Size = UDim2.new(1, 0, 0, SecLayout.AbsoluteContentSize.Y)
                 updateCanvas()
             end
             InnerLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(syncSizes)
 
-            -- Theme sync
             task.spawn(function()
                 while task.wait(0) do
-                    SecHeader.BackgroundColor3 = theme.Accent
+                    SecHeader.BackgroundColor3    = theme.Accent
                     SecAccentBar.BackgroundColor3 = theme.Accent
-                    SecLabel.TextColor3        = theme.Text
+                    SecLabel.TextColor3           = theme.Text
                 end
             end)
 
-            -- ── Tooltip helper ─────────────────────────────────────────────
             local focusing  = false
             local viewDelay = false
 
@@ -595,14 +593,14 @@ function Kavo.CreateLib(libName, themeInput)
                 focusing  = true
                 for _, v in ipairs(InfoBar:GetChildren()) do
                     if v:IsA("TextLabel") and v ~= label then
-                        Tween(v, {Position = UDim2.new(0,0,2,0)}, 0.15)
+                        Tween(v, {Position = UDim2.new(0, 8, 2, 0)}, 0.15)
                     end
                 end
                 Tween(label, {Position = UDim2.new(0, 8, 0, 0)}, 0.15)
                 Tween(BlurFrame, {BackgroundTransparency = 0.6}, 0.15)
                 task.wait(1.8)
-                focusing  = false
-                Tween(label, {Position = UDim2.new(0,8,2,0)}, 0.15)
+                focusing = false
+                Tween(label, {Position = UDim2.new(0, 8, 2, 0)}, 0.15)
                 Tween(BlurFrame, {BackgroundTransparency = 1}, 0.15)
                 task.wait(0.05)
                 viewDelay = false
@@ -610,199 +608,160 @@ function Kavo.CreateLib(libName, themeInput)
 
             local function makeTooltip(text)
                 local tip = Instance.new("TextLabel")
-                tip.Parent          = InfoBar
+                tip.Parent                 = InfoBar
                 tip.BackgroundTransparency = 1
-                tip.Position        = UDim2.new(0, 8, 2, 0)
-                tip.Size            = UDim2.new(1, -16, 1, 0)
-                tip.Font            = Enum.Font.Gotham
-                tip.Text            = text
-                tip.RichText        = true
-                tip.TextColor3      = theme.TextMuted
-                tip.TextSize        = 12
-                tip.TextXAlignment  = Enum.TextXAlignment.Left
-                tip.ZIndex          = 5
+                tip.Position               = UDim2.new(0, 8, 2, 0)   -- hidden below
+                tip.Size                   = UDim2.new(1, -16, 1, 0)
+                tip.Font                   = Enum.Font.Gotham
+                tip.Text                   = text
+                tip.RichText               = true
+                tip.TextColor3             = theme.TextMuted
+                tip.TextSize               = 12
+                tip.TextXAlignment         = Enum.TextXAlignment.Left
+                tip.ZIndex                 = 5
                 task.spawn(function()
-                    while task.wait(0) do
-                        tip.TextColor3 = theme.TextMuted
-                    end
+                    while task.wait(0) do tip.TextColor3 = theme.TextMuted end
                 end)
                 return tip
             end
 
-            -- ── Element factory ─────────────────────────────────────────────
             local Elements = {}
+            local elOrder   = 0
 
-            -- ── New Element base ────────────────────────────────────────────
+            -- Base element factory
             local function makeBaseElement(icon, iconRect, iconRectSz)
+                elOrder = elOrder + 1
                 local el = Instance.new("TextButton")
-                el.Parent          = SecInners
-                el.BackgroundColor3 = theme.Element
-                el.ClipsDescendants = true
-                el.Size            = UDim2.new(1, 0, 0, 36)
-                el.AutoButtonColor = false
-                el.Font            = Enum.Font.SourceSans
-                el.Text            = ""
+                el.Parent             = SecInners
+                el.BackgroundColor3   = theme.Element
+                el.ClipsDescendants   = true
+                el.Size               = UDim2.new(1, 0, 0, 36)
+                el.AutoButtonColor    = false
+                el.Font               = Enum.Font.SourceSans
+                el.Text               = ""
+                el.LayoutOrder        = elOrder  -- FIX: explicit order
                 corner(el, 8)
 
-                -- Icon
+                -- Icon — FIX: AnchorPoint(0,0.5) + Y=0.5 vertically centers; no -9 hack
                 local ic = Instance.new("ImageLabel")
-                ic.Parent          = el
+                ic.Parent                 = el
                 ic.BackgroundTransparency = 1
-                ic.Position        = UDim2.new(0, 10, 0.5, -9)
-                ic.Size            = UDim2.fromOffset(18, 18)
-                ic.Image           = icon or "rbxassetid://3926305904"
-                ic.ImageColor3     = theme.Accent
-                if iconRect then ic.ImageRectOffset = iconRect end
-                if iconRectSz then ic.ImageRectSize = iconRectSz end
+                ic.AnchorPoint            = Vector2.new(0, 0.5)
+                ic.Position               = UDim2.new(0, 10, 0.5, 0)
+                ic.Size                   = UDim2.fromOffset(18, 18)
+                ic.Image                  = icon or "rbxassetid://3926305904"
+                ic.ImageColor3            = theme.Accent
+                if iconRect   then ic.ImageRectOffset = iconRect   end
+                if iconRectSz then ic.ImageRectSize   = iconRectSz end
 
-                -- Label
+                -- Label — FIX: AnchorPoint(0,0.5) to vertically center
                 local lb = Instance.new("TextLabel")
-                lb.Parent          = el
+                lb.Parent                 = el
                 lb.BackgroundTransparency = 1
-                lb.Position        = UDim2.new(0, 36, 0.5, -8)
-                lb.Size            = UDim2.new(0.55, 0, 0, 16)
-                lb.Font            = Enum.Font.GothamMedium
-                lb.Text            = ""
-                lb.RichText        = true
-                lb.TextColor3      = theme.Text
-                lb.TextSize        = 13
-                lb.TextXAlignment  = Enum.TextXAlignment.Left
+                lb.AnchorPoint            = Vector2.new(0, 0.5)
+                lb.Position               = UDim2.new(0, 36, 0.5, 0)
+                lb.Size                   = UDim2.new(0.55, 0, 0, 16)
+                lb.Font                   = Enum.Font.GothamMedium
+                lb.Text                   = ""
+                lb.RichText               = true
+                lb.TextColor3             = theme.Text
+                lb.TextSize               = 13
+                lb.TextXAlignment         = Enum.TextXAlignment.Left
 
-                -- Info button
+                -- Info button — FIX: AnchorPoint(1,0.5) anchors to right-center; no -28 offset
                 local infoBtn = Instance.new("ImageButton")
-                infoBtn.Parent          = el
+                infoBtn.Parent                 = el
                 infoBtn.BackgroundTransparency = 1
-                infoBtn.Position        = UDim2.new(1, -28, 0.5, -10)
-                infoBtn.Size            = UDim2.fromOffset(20, 20)
-                infoBtn.ZIndex          = 4
-                infoBtn.Image           = "rbxassetid://3926305904"
-                infoBtn.ImageColor3     = theme.TextMuted
-                infoBtn.ImageRectOffset = Vector2.new(764, 764)
-                infoBtn.ImageRectSize   = Vector2.new(36, 36)
+                infoBtn.AnchorPoint            = Vector2.new(1, 0.5)
+                infoBtn.Position               = UDim2.new(1, -8, 0.5, 0)
+                infoBtn.Size                   = UDim2.fromOffset(20, 20)
+                infoBtn.ZIndex                 = 4
+                infoBtn.Image                  = "rbxassetid://3926305904"
+                infoBtn.ImageColor3            = theme.TextMuted
+                infoBtn.ImageRectOffset        = Vector2.new(764, 764)
+                infoBtn.ImageRectSize          = Vector2.new(36, 36)
 
-                -- Hover fx
                 local hovering = false
                 el.MouseEnter:Connect(function()
-                    if not focusing then
-                        Tween(el, {BackgroundColor3 = theme.ElementHov}, 0.1)
-                        hovering = true
-                    end
+                    if not focusing then Tween(el, {BackgroundColor3 = theme.ElementHov}, 0.1); hovering = true end
                 end)
                 el.MouseLeave:Connect(function()
-                    if not focusing then
-                        Tween(el, {BackgroundColor3 = theme.Element}, 0.1)
-                        hovering = false
-                    end
+                    if not focusing then Tween(el, {BackgroundColor3 = theme.Element}, 0.1); hovering = false end
                 end)
-
                 task.spawn(function()
                     while task.wait(0) do
-                        if not hovering then
-                            el.BackgroundColor3 = theme.Element
-                        end
-                        ic.ImageColor3     = theme.Accent
-                        lb.TextColor3      = theme.Text
+                        if not hovering then el.BackgroundColor3 = theme.Element end
+                        ic.ImageColor3      = theme.Accent
+                        lb.TextColor3       = theme.Text
                         infoBtn.ImageColor3 = theme.TextMuted
                     end
                 end)
-
                 return el, ic, lb, infoBtn
             end
 
-            -- ── Button ──────────────────────────────────────────────────────
+            -- ── Button ────────────────────────────────────────────────────
             function Elements:NewButton(bname, tip, callback)
-                bname    = bname or "Button"
-                tip      = tip or ""
-                callback = callback or function() end
-
-                local el, ic, lb, infoBtn = makeBaseElement(
-                    "rbxassetid://3926305904",
-                    Vector2.new(84, 204), Vector2.new(36, 36)
-                )
+                bname = bname or "Button"; tip = tip or ""; callback = callback or function() end
+                local el, ic, lb, infoBtn = makeBaseElement("rbxassetid://3926305904", Vector2.new(84,204), Vector2.new(36,36))
                 lb.Text = bname
-
                 local tooltip = makeTooltip(tip)
-                infoBtn.MouseButton1Click:Connect(function()
-                    showTooltip(tooltip)
-                end)
-
+                infoBtn.MouseButton1Click:Connect(function() showTooltip(tooltip) end)
                 el.MouseButton1Click:Connect(function()
-                    if not focusing then
-                        callback()
-                        task.spawn(ripple, el, theme)
-                    else
-                        Tween(BlurFrame, {BackgroundTransparency = 1}, 0.15)
-                        focusing = false
-                    end
+                    if not focusing then callback(); task.spawn(ripple, el, theme)
+                    else Tween(BlurFrame, {BackgroundTransparency = 1}, 0.15); focusing = false end
                 end)
-
                 syncSizes()
                 local BtnFn = {}
-                function BtnFn:UpdateButton(newText)
-                    lb.Text = newText
-                end
+                function BtnFn:UpdateButton(t) lb.Text = t end
                 return BtnFn
             end
 
-            -- ── Toggle ──────────────────────────────────────────────────────
+            -- ── Toggle ────────────────────────────────────────────────────
             function Elements:NewToggle(tname, tip, callback)
-                tname    = tname or "Toggle"
-                tip      = tip or ""
-                callback = callback or function() end
-
+                tname = tname or "Toggle"; tip = tip or ""; callback = callback or function() end
                 local toggled = false
-                local el, ic, lb, infoBtn = makeBaseElement(
-                    "rbxassetid://3926309567",
-                    Vector2.new(628, 420), Vector2.new(48, 48)
-                )
+                local el, ic, lb, infoBtn = makeBaseElement("rbxassetid://3926309567", Vector2.new(628,420), Vector2.new(48,48))
                 lb.Text = tname
 
-                -- Toggle track
+                -- Track — FIX: AnchorPoint(1,0.5) right-centers it; no manual offset math
                 local Track = Instance.new("Frame")
-                Track.Parent          = el
+                Track.Parent           = el
                 Track.BackgroundColor3 = theme.Border
-                Track.Position        = UDim2.new(1, -54, 0.5, -9)
-                Track.Size            = UDim2.fromOffset(34, 18)
+                Track.AnchorPoint      = Vector2.new(1, 0.5)
+                Track.Position         = UDim2.new(1, -32, 0.5, 0)
+                Track.Size             = UDim2.fromOffset(34, 18)
                 corner(Track, 9)
 
+                -- Thumb — FIX: AnchorPoint(0,0.5) centers it vertically inside the track
                 local Thumb = Instance.new("Frame")
-                Thumb.Parent          = Track
-                Thumb.BackgroundColor3 = Color3.new(1, 1, 1)
-                Thumb.Position        = UDim2.new(0, 2, 0.5, -7)
-                Thumb.Size            = UDim2.fromOffset(14, 14)
+                Thumb.Parent           = Track
+                Thumb.BackgroundColor3 = Color3.new(1,1,1)
+                Thumb.AnchorPoint      = Vector2.new(0, 0.5)
+                Thumb.Position         = UDim2.new(0, 2, 0.5, 0)
+                Thumb.Size             = UDim2.fromOffset(14, 14)
                 corner(Thumb, 7)
 
                 local function setToggle(state, silent)
                     toggled = state
                     if state then
                         Tween(Track, {BackgroundColor3 = theme.Accent}, 0.18)
-                        Tween(Thumb, {Position = UDim2.new(0, 18, 0.5, -7)}, 0.18)
+                        Tween(Thumb, {Position = UDim2.new(0, 18, 0.5, 0)}, 0.18)
                     else
                         Tween(Track, {BackgroundColor3 = theme.Border}, 0.18)
-                        Tween(Thumb, {Position = UDim2.new(0, 2, 0.5, -7)}, 0.18)
+                        Tween(Thumb, {Position = UDim2.new(0, 2, 0.5, 0)}, 0.18)
                     end
                     if not silent then pcall(callback, state) end
                 end
 
                 el.MouseButton1Click:Connect(function()
-                    if not focusing then
-                        setToggle(not toggled)
-                        task.spawn(ripple, el, theme)
-                    else
-                        Tween(BlurFrame, {BackgroundTransparency = 1}, 0.15)
-                        focusing = false
-                    end
+                    if not focusing then setToggle(not toggled); task.spawn(ripple, el, theme)
+                    else Tween(BlurFrame, {BackgroundTransparency = 1}, 0.15); focusing = false end
                 end)
-
                 local tooltip = makeTooltip(tip)
                 infoBtn.MouseButton1Click:Connect(function() showTooltip(tooltip) end)
-
                 task.spawn(function()
-                    while task.wait(0) do
-                        Thumb.BackgroundColor3 = Color3.new(1, 1, 1)
-                    end
+                    while task.wait(0) do Thumb.BackgroundColor3 = Color3.new(1,1,1) end
                 end)
-
                 syncSizes()
                 local TogFn = {}
                 function TogFn:UpdateToggle(newText, state)
@@ -813,87 +772,74 @@ function Kavo.CreateLib(libName, themeInput)
                 return TogFn
             end
 
-            -- ── Slider ──────────────────────────────────────────────────────
+            -- ── Slider ────────────────────────────────────────────────────
             function Elements:NewSlider(sname, tip, maxVal, minVal, defVal, callback)
-                sname    = sname or "Slider"
-                tip      = tip or ""
-                maxVal   = maxVal or 100
-                minVal   = minVal or 0
-                defVal   = defVal or minVal
-                callback = callback or function() end
-
-                local el, ic, lb, infoBtn = makeBaseElement(
-                    "rbxassetid://3926307971",
-                    Vector2.new(404, 164), Vector2.new(36, 36)
-                )
+                sname = sname or "Slider"; tip = tip or ""
+                maxVal = maxVal or 100; minVal = minVal or 0
+                defVal = defVal or minVal; callback = callback or function() end
+                local el, ic, lb, infoBtn = makeBaseElement("rbxassetid://3926307971", Vector2.new(404,164), Vector2.new(36,36))
                 lb.Text = sname
                 lb.Size = UDim2.new(0.38, 0, 0, 16)
 
+                -- Value label — FIX: AnchorPoint(0,0.5) vertically centered
                 local ValLabel = Instance.new("TextLabel")
-                ValLabel.Parent          = el
+                ValLabel.Parent                 = el
                 ValLabel.BackgroundTransparency = 1
-                ValLabel.Position        = UDim2.new(0.38, 0, 0.5, -8)
-                ValLabel.Size            = UDim2.fromOffset(36, 16)
-                ValLabel.Font            = Enum.Font.GothamMedium
-                ValLabel.Text            = tostring(defVal)
-                ValLabel.TextColor3      = theme.Accent
-                ValLabel.TextSize        = 12
-                ValLabel.TextXAlignment  = Enum.TextXAlignment.Right
+                ValLabel.AnchorPoint            = Vector2.new(0, 0.5)
+                ValLabel.Position               = UDim2.new(0.38, 2, 0.5, 0)
+                ValLabel.Size                   = UDim2.fromOffset(36, 16)
+                ValLabel.Font                   = Enum.Font.GothamMedium
+                ValLabel.Text                   = tostring(defVal)
+                ValLabel.TextColor3             = theme.Accent
+                ValLabel.TextSize               = 12
+                ValLabel.TextXAlignment         = Enum.TextXAlignment.Right
 
-                -- Slider track
+                -- Track — FIX: AnchorPoint(0,0.5) vertically centered
                 local TrackBG = Instance.new("Frame")
-                TrackBG.Parent          = el
+                TrackBG.Parent           = el
                 TrackBG.BackgroundColor3 = theme.Border
-                TrackBG.Position        = UDim2.new(0, 36, 0.5, -2)
-                TrackBG.Size            = UDim2.new(1, -100, 0, 4)
+                TrackBG.AnchorPoint      = Vector2.new(0, 0.5)
+                TrackBG.Position         = UDim2.new(0.5, 4, 0.5, 0)
+                TrackBG.Size             = UDim2.new(0.5, -40, 0, 4)
                 corner(TrackBG, 2)
 
+                local range = math.max(maxVal - minVal, 1)
+                local startPct = (defVal - minVal) / range
                 local TrackFill = Instance.new("Frame")
-                TrackFill.Parent          = TrackBG
+                TrackFill.Parent           = TrackBG
                 TrackFill.BackgroundColor3 = theme.Accent
-                TrackFill.Size            = UDim2.new((defVal - minVal) / (maxVal - minVal), 0, 1, 0)
+                TrackFill.Size             = UDim2.new(startPct, 0, 1, 0)
                 corner(TrackFill, 2)
 
+                -- Knob — FIX: AnchorPoint(0.5,0.5) so position is the knob center; no manual offsets
                 local Knob = Instance.new("Frame")
-                Knob.Parent          = TrackBG
-                Knob.BackgroundColor3 = Color3.new(1, 1, 1)
-                Knob.AnchorPoint     = Vector2.new(0.5, 0.5)
-                Knob.Position        = UDim2.new((defVal - minVal)/(maxVal - minVal), 0, 0.5, 0)
-                Knob.Size            = UDim2.fromOffset(12, 12)
+                Knob.Parent           = TrackBG
+                Knob.BackgroundColor3 = Color3.new(1,1,1)
+                Knob.AnchorPoint      = Vector2.new(0.5, 0.5)
+                Knob.Position         = UDim2.new(startPct, 0, 0.5, 0)
+                Knob.Size             = UDim2.fromOffset(12, 12)
                 corner(Knob, 6)
 
                 local mouse = game.Players.LocalPlayer:GetMouse()
                 local uis   = game:GetService("UserInputService")
-                local draggingSlider = false
+                local dragging = false
+                local mcon, ucon
 
                 local function updateSlider()
-                    local pct = math.clamp(
-                        (mouse.X - TrackBG.AbsolutePosition.X) / TrackBG.AbsoluteSize.X,
-                        0, 1
-                    )
-                    local val = math.floor(minVal + (maxVal - minVal) * pct)
+                    local pct = math.clamp((mouse.X - TrackBG.AbsolutePosition.X) / TrackBG.AbsoluteSize.X, 0, 1)
                     TrackFill.Size = UDim2.new(pct, 0, 1, 0)
                     Knob.Position  = UDim2.new(pct, 0, 0.5, 0)
-                    ValLabel.Text  = tostring(val)
-                    pcall(callback, val)
+                    ValLabel.Text  = tostring(math.floor(minVal + range * pct))
+                    pcall(callback, math.floor(minVal + range * pct))
                 end
 
                 el.MouseButton1Down:Connect(function()
                     if not focusing then
-                        draggingSlider = true
-                        updateSlider()
-                    end
-                end)
-
-                local mcon, ucon
-                el.MouseButton1Down:Connect(function()
-                    if not focusing then
-                        mcon = mouse.Move:Connect(function()
-                            if draggingSlider then updateSlider() end
-                        end)
+                        dragging = true; updateSlider()
+                        mcon = mouse.Move:Connect(function() if dragging then updateSlider() end end)
                         ucon = uis.InputEnded:Connect(function(inp)
                             if inp.UserInputType == Enum.UserInputType.MouseButton1 then
-                                draggingSlider = false
+                                dragging = false
                                 if mcon then mcon:Disconnect() end
                                 if ucon then ucon:Disconnect() end
                             end
@@ -903,64 +849,49 @@ function Kavo.CreateLib(libName, themeInput)
 
                 local tooltip = makeTooltip(tip)
                 infoBtn.MouseButton1Click:Connect(function() showTooltip(tooltip) end)
-
                 task.spawn(function()
                     while task.wait(0) do
                         TrackBG.BackgroundColor3   = theme.Border
                         TrackFill.BackgroundColor3 = theme.Accent
                         ValLabel.TextColor3        = theme.Accent
-                        Knob.BackgroundColor3      = Color3.new(1, 1, 1)
+                        Knob.BackgroundColor3      = Color3.new(1,1,1)
                     end
                 end)
-
                 syncSizes()
             end
 
-            -- ── Textbox ──────────────────────────────────────────────────────
+            -- ── TextBox ───────────────────────────────────────────────────
             function Elements:NewTextBox(tname, tip, callback)
-                tname    = tname or "TextBox"
-                tip      = tip or ""
-                callback = callback or function() end
+                tname = tname or "TextBox"; tip = tip or ""; callback = callback or function() end
+                local el, ic, lb, infoBtn = makeBaseElement("rbxassetid://3926305904", Vector2.new(324,604), Vector2.new(36,36))
+                lb.Text = tname; lb.Size = UDim2.new(0.38, 0, 0, 16)
 
-                local el, ic, lb, infoBtn = makeBaseElement(
-                    "rbxassetid://3926305904",
-                    Vector2.new(324, 604), Vector2.new(36, 36)
-                )
-                lb.Text = tname
-                lb.Size = UDim2.new(0.38, 0, 0, 16)
-
+                -- Input frame — FIX: AnchorPoint(0,0.5) vertically centered
                 local InputFrame = Instance.new("Frame")
-                InputFrame.Parent          = el
+                InputFrame.Parent           = el
                 InputFrame.BackgroundColor3 = theme.Background
-                InputFrame.Position        = UDim2.new(0, 36, 0.5, -10)
-                InputFrame.Size            = UDim2.new(1, -100, 0, 20)
-                corner(InputFrame, 6)
-                stroke(InputFrame, theme.Border)
+                InputFrame.AnchorPoint      = Vector2.new(0, 0.5)
+                InputFrame.Position         = UDim2.new(0.4, 4, 0.5, 0)
+                InputFrame.Size             = UDim2.new(0.6, -40, 0, 22)
+                corner(InputFrame, 6); stroke(InputFrame, theme.Border)
 
                 local Input = Instance.new("TextBox")
-                Input.Parent          = InputFrame
+                Input.Parent                 = InputFrame
                 Input.BackgroundTransparency = 1
-                Input.Position        = UDim2.new(0, 8, 0, 0)
-                Input.Size            = UDim2.new(1, -16, 1, 0)
-                Input.Font            = Enum.Font.Gotham
-                Input.PlaceholderText = "Enter value..."
-                Input.PlaceholderColor3 = theme.TextMuted
-                Input.Text            = ""
-                Input.TextColor3      = theme.Text
-                Input.TextSize        = 12
-                Input.ClearTextOnFocus = false
-
+                Input.Position               = UDim2.new(0, 8, 0, 0)
+                Input.Size                   = UDim2.new(1, -16, 1, 0)
+                Input.Font                   = Enum.Font.Gotham
+                Input.PlaceholderText        = "Enter value..."
+                Input.PlaceholderColor3      = theme.TextMuted
+                Input.Text                   = ""
+                Input.TextColor3             = theme.Text
+                Input.TextSize               = 12
+                Input.ClearTextOnFocus       = false
                 Input.FocusLost:Connect(function(enter)
-                    if enter then
-                        callback(Input.Text)
-                        task.wait(0.12)
-                        Input.Text = ""
-                    end
+                    if enter then callback(Input.Text); task.wait(0.12); Input.Text = "" end
                 end)
-
                 local tooltip = makeTooltip(tip)
                 infoBtn.MouseButton1Click:Connect(function() showTooltip(tooltip) end)
-
                 task.spawn(function()
                     while task.wait(0) do
                         InputFrame.BackgroundColor3 = theme.Background
@@ -968,309 +899,247 @@ function Kavo.CreateLib(libName, themeInput)
                         Input.PlaceholderColor3     = theme.TextMuted
                     end
                 end)
-
                 syncSizes()
             end
 
-            -- ── Dropdown ─────────────────────────────────────────────────────
+            -- ── Dropdown ──────────────────────────────────────────────────
             function Elements:NewDropdown(dname, tip, list, callback)
-                dname    = dname or "Dropdown"
-                tip      = tip or ""
-                list     = list or {}
-                callback = callback or function() end
-
+                dname = dname or "Dropdown"; tip = tip or ""; list = list or {}; callback = callback or function() end
                 local opened = false
-                local el, ic, lb, infoBtn = makeBaseElement(
-                    "rbxassetid://3926305904",
-                    Vector2.new(644, 364), Vector2.new(36, 36)
-                )
+                local el, ic, lb, infoBtn = makeBaseElement("rbxassetid://3926305904", Vector2.new(644,364), Vector2.new(36,36))
                 lb.Text = dname
 
-                local ChevronImg = Instance.new("ImageLabel")
-                ChevronImg.Parent          = el
-                ChevronImg.BackgroundTransparency = 1
-                ChevronImg.Position        = UDim2.new(1, -52, 0.5, -9)
-                ChevronImg.Size            = UDim2.fromOffset(18, 18)
-                ChevronImg.Image           = "rbxassetid://3926305904"
-                ChevronImg.ImageColor3     = theme.TextMuted
-                ChevronImg.ImageRectOffset = Vector2.new(284, 284)
-                ChevronImg.ImageRectSize   = Vector2.new(36, 36)
+                -- Chevron — FIX: AnchorPoint(1,0.5) right-centers it
+                local Chevron = Instance.new("ImageLabel")
+                Chevron.Parent                 = el
+                Chevron.BackgroundTransparency = 1
+                Chevron.AnchorPoint            = Vector2.new(1, 0.5)
+                Chevron.Position               = UDim2.new(1, -32, 0.5, 0)
+                Chevron.Size                   = UDim2.fromOffset(18, 18)
+                Chevron.Image                  = "rbxassetid://3926305904"
+                Chevron.ImageColor3            = theme.TextMuted
+                Chevron.ImageRectOffset        = Vector2.new(284, 284)
+                Chevron.ImageRectSize          = Vector2.new(36, 36)
 
+                elOrder = elOrder + 1
                 local OptionList = Instance.new("Frame")
-                OptionList.Parent          = SecInners
+                OptionList.Parent                 = SecInners
                 OptionList.BackgroundTransparency = 1
-                OptionList.Size            = UDim2.new(1, 0, 0, 0)
-                OptionList.ClipsDescendants = true
+                OptionList.Size                   = UDim2.new(1, 0, 0, 0)
+                OptionList.ClipsDescendants       = true
+                OptionList.LayoutOrder            = elOrder  -- sits right after the button
 
                 local OptionLayout = Instance.new("UIListLayout")
                 OptionLayout.Parent    = OptionList
                 OptionLayout.SortOrder = Enum.SortOrder.LayoutOrder
                 OptionLayout.Padding   = UDim.new(0, 3)
-
                 local OptionPad = Instance.new("UIPadding")
-                OptionPad.Parent     = OptionList
-                OptionPad.PaddingTop = UDim.new(0, 3)
+                OptionPad.Parent = OptionList; OptionPad.PaddingTop = UDim.new(0,3)
 
+                local optOrder = 0
                 local function addOption(text)
+                    optOrder = optOrder + 1
                     local opt = Instance.new("TextButton")
-                    opt.Parent          = OptionList
+                    opt.Parent           = OptionList
                     opt.BackgroundColor3 = theme.Element
-                    opt.Size            = UDim2.new(1, 0, 0, 32)
-                    opt.AutoButtonColor = false
-                    opt.Font            = Enum.Font.GothamMedium
-                    opt.Text            = "  "..text
-                    opt.RichText        = true
-                    opt.TextColor3      = theme.TextMuted
-                    opt.TextSize        = 12
-                    opt.TextXAlignment  = Enum.TextXAlignment.Left
+                    opt.Size             = UDim2.new(1, 0, 0, 32)
+                    opt.AutoButtonColor  = false
+                    opt.Font             = Enum.Font.GothamMedium
+                    opt.Text             = "  "..text
+                    opt.RichText         = true
+                    opt.TextColor3       = theme.TextMuted
+                    opt.TextSize         = 12
+                    opt.TextXAlignment   = Enum.TextXAlignment.Left
+                    opt.LayoutOrder      = optOrder
                     corner(opt, 7)
-
-                    opt.MouseEnter:Connect(function()
-                        Tween(opt, {BackgroundColor3 = theme.ElementHov, TextColor3 = theme.Text}, 0.1)
-                    end)
-                    opt.MouseLeave:Connect(function()
-                        Tween(opt, {BackgroundColor3 = theme.Element, TextColor3 = theme.TextMuted}, 0.1)
-                    end)
+                    opt.MouseEnter:Connect(function() Tween(opt, {BackgroundColor3=theme.ElementHov,TextColor3=theme.Text}, 0.1) end)
+                    opt.MouseLeave:Connect(function() Tween(opt, {BackgroundColor3=theme.Element,TextColor3=theme.TextMuted}, 0.1) end)
                     opt.MouseButton1Click:Connect(function()
-                        lb.Text = dname.." → "..text
-                        opened = false
-                        local cs = OptionLayout.AbsoluteContentSize
+                        lb.Text = dname.." → "..text; opened = false
                         OptionList:TweenSize(UDim2.new(1,0,0,0), "InOut","Quart",0.18,true)
-                        task.wait(0.2)
-                        syncSizes()
-                        callback(text)
-                        task.spawn(ripple, opt, theme)
+                        task.wait(0.2); syncSizes(); callback(text); task.spawn(ripple, opt, theme)
                     end)
-                    task.spawn(function()
-                        while task.wait(0) do
-                            opt.BackgroundColor3 = theme.Element
-                        end
-                    end)
+                    task.spawn(function() while task.wait(0) do opt.BackgroundColor3 = theme.Element end end)
                 end
-
                 for _, v in ipairs(list) do addOption(v) end
 
                 el.MouseButton1Click:Connect(function()
                     if not focusing then
                         opened = not opened
                         local cs = OptionLayout.AbsoluteContentSize
-                        if opened then
-                            OptionList:TweenSize(UDim2.new(1,0,0, cs.Y + 6), "InOut","Quart",0.2,true)
-                        else
-                            OptionList:TweenSize(UDim2.new(1,0,0,0), "InOut","Quart",0.18,true)
-                        end
-                        task.wait(0.22)
-                        syncSizes()
-                        task.spawn(ripple, el, theme)
+                        OptionList:TweenSize(opened and UDim2.new(1,0,0,cs.Y+6) or UDim2.new(1,0,0,0), "InOut","Quart",0.2,true)
+                        task.wait(0.22); syncSizes(); task.spawn(ripple, el, theme)
                     end
                 end)
-
                 local tooltip = makeTooltip(tip)
                 infoBtn.MouseButton1Click:Connect(function() showTooltip(tooltip) end)
-
                 syncSizes()
 
                 local DropFn = {}
                 function DropFn:Refresh(newList)
-                    for _, v in ipairs(OptionList:GetChildren()) do
-                        if v:IsA("TextButton") then v:Destroy() end
-                    end
-                    for _, v in ipairs(newList) do addOption(v) end
+                    for _, v in ipairs(OptionList:GetChildren()) do if v:IsA("TextButton") then v:Destroy() end end
+                    optOrder = 0; for _, v in ipairs(newList) do addOption(v) end
                     if opened then
                         local cs = OptionLayout.AbsoluteContentSize
-                        OptionList:TweenSize(UDim2.new(1,0,0, cs.Y + 6), "InOut","Quart",0.1,true)
-                        task.wait(0.12)
-                        syncSizes()
+                        OptionList:TweenSize(UDim2.new(1,0,0,cs.Y+6), "InOut","Quart",0.1,true)
+                        task.wait(0.12); syncSizes()
                     end
                 end
                 return DropFn
             end
 
-            -- ── Keybind ──────────────────────────────────────────────────────
+            -- ── Keybind ───────────────────────────────────────────────────
             function Elements:NewKeybind(kname, tip, defaultKey, callback)
-                kname      = kname or "Keybind"
-                tip        = tip or ""
-                callback   = callback or function() end
+                kname = kname or "Keybind"; tip = tip or ""; callback = callback or function() end
                 local currentKey = defaultKey and defaultKey.Name or "F"
-
-                local el, ic, lb, infoBtn = makeBaseElement(
-                    "rbxassetid://3926305904",
-                    Vector2.new(364, 284), Vector2.new(36, 36)
-                )
+                local el, ic, lb, infoBtn = makeBaseElement("rbxassetid://3926305904", Vector2.new(364,284), Vector2.new(36,36))
                 lb.Text = kname
 
+                -- Key badge — FIX: AnchorPoint(1,0.5) right-centers it
                 local KeyBadge = Instance.new("TextButton")
-                KeyBadge.Parent          = el
+                KeyBadge.Parent           = el
                 KeyBadge.BackgroundColor3 = theme.Element
-                KeyBadge.Position        = UDim2.new(1, -80, 0.5, -11)
-                KeyBadge.Size            = UDim2.fromOffset(52, 22)
-                KeyBadge.Font            = Enum.Font.GothamMedium
-                KeyBadge.Text            = currentKey
-                KeyBadge.TextColor3      = theme.Accent
-                KeyBadge.TextSize        = 12
-                KeyBadge.AutoButtonColor = false
-                corner(KeyBadge, 6)
-                stroke(KeyBadge, theme.Border)
-
+                KeyBadge.AnchorPoint      = Vector2.new(1, 0.5)
+                KeyBadge.Position         = UDim2.new(1, -32, 0.5, 0)
+                KeyBadge.Size             = UDim2.fromOffset(52, 22)
+                KeyBadge.Font             = Enum.Font.GothamMedium
+                KeyBadge.Text             = currentKey
+                KeyBadge.TextColor3       = theme.Accent
+                KeyBadge.TextSize         = 12
+                KeyBadge.AutoButtonColor  = false
+                corner(KeyBadge, 6); stroke(KeyBadge, theme.Border)
                 KeyBadge.MouseButton1Click:Connect(function()
                     KeyBadge.Text = "..."
                     local inp = UserInputService.InputBegan:Wait()
-                    if inp.KeyCode.Name ~= "Unknown" then
-                        currentKey = inp.KeyCode.Name
-                        KeyBadge.Text = currentKey
-                    end
+                    if inp.KeyCode.Name ~= "Unknown" then currentKey = inp.KeyCode.Name; KeyBadge.Text = currentKey end
                 end)
-
                 UserInputService.InputBegan:Connect(function(inp, gp)
-                    if not gp and inp.KeyCode.Name == currentKey then
-                        callback()
-                    end
+                    if not gp and inp.KeyCode.Name == currentKey then callback() end
                 end)
-
                 local tooltip = makeTooltip(tip)
                 infoBtn.MouseButton1Click:Connect(function() showTooltip(tooltip) end)
-
                 task.spawn(function()
-                    while task.wait(0) do
-                        KeyBadge.BackgroundColor3 = theme.Element
-                        KeyBadge.TextColor3       = theme.Accent
-                    end
+                    while task.wait(0) do KeyBadge.BackgroundColor3 = theme.Element; KeyBadge.TextColor3 = theme.Accent end
                 end)
-
                 syncSizes()
             end
 
-            -- ── Label ────────────────────────────────────────────────────────
+            -- ── Label ─────────────────────────────────────────────────────
             function Elements:NewLabel(text)
+                elOrder = elOrder + 1
                 local lbl = Instance.new("TextLabel")
-                lbl.Parent          = SecInners
-                lbl.BackgroundColor3 = theme.Accent
+                lbl.Parent                 = SecInners
+                lbl.BackgroundColor3       = theme.Accent
                 lbl.BackgroundTransparency = 0.88
-                lbl.ClipsDescendants = true
-                lbl.Size            = UDim2.new(1, 0, 0, 30)
-                lbl.Font            = Enum.Font.GothamMedium
-                lbl.Text            = "  "..text
-                lbl.RichText        = true
-                lbl.TextColor3      = theme.Text
-                lbl.TextSize        = 13
-                lbl.TextXAlignment  = Enum.TextXAlignment.Left
+                lbl.ClipsDescendants       = true
+                lbl.Size                   = UDim2.new(1, 0, 0, 30)
+                lbl.Font                   = Enum.Font.GothamMedium
+                lbl.Text                   = "  "..text
+                lbl.RichText               = true
+                lbl.TextColor3             = theme.Text
+                lbl.TextSize               = 13
+                lbl.TextXAlignment         = Enum.TextXAlignment.Left
+                lbl.LayoutOrder            = elOrder
                 corner(lbl, 7)
-
                 task.spawn(function()
-                    while task.wait(0) do
-                        lbl.BackgroundColor3 = theme.Accent
-                        lbl.TextColor3       = theme.Text
-                    end
+                    while task.wait(0) do lbl.BackgroundColor3 = theme.Accent; lbl.TextColor3 = theme.Text end
                 end)
-
                 syncSizes()
-
                 local LblFn = {}
-                function LblFn:UpdateLabel(newText)
-                    lbl.Text = "  "..newText
-                end
+                function LblFn:UpdateLabel(t) lbl.Text = "  "..t end
                 return LblFn
             end
 
-            -- ── Color Picker ─────────────────────────────────────────────────
+            -- ── Color Picker ──────────────────────────────────────────────
             function Elements:NewColorPicker(cpName, tip, defColor, callback)
-                cpName   = cpName or "Color"
-                tip      = tip or ""
-                defColor = defColor or Color3.fromRGB(255, 100, 100)
-                callback = callback or function() end
-
-                local h, s, v = Color3.toHSV(defColor)
+                cpName = cpName or "Color"; tip = tip or ""
+                defColor = defColor or Color3.fromRGB(255,100,100); callback = callback or function() end
+                local h, s, v   = Color3.toHSV(defColor)
                 local colorOpen = false
-                local plr = game.Players.LocalPlayer
-                local mouse = plr:GetMouse()
-                local uis = game:GetService("UserInputService")
+                local plr       = game.Players.LocalPlayer
+                local mouse     = plr:GetMouse()
+                local uis       = game:GetService("UserInputService")
 
-                local el, ic, lb, infoBtn = makeBaseElement(
-                    "rbxassetid://3926305904",
-                    Vector2.new(44, 964), Vector2.new(36, 36)
-                )
-                lb.Text = cpName
-                lb.Size = UDim2.new(0.45, 0, 0, 16)
+                local el, ic, lb, infoBtn = makeBaseElement("rbxassetid://3926305904", Vector2.new(44,964), Vector2.new(36,36))
+                lb.Text = cpName; lb.Size = UDim2.new(0.45, 0, 0, 16)
 
-                -- Color swatch
+                -- Swatch — FIX: AnchorPoint(1,0.5)
                 local Swatch = Instance.new("Frame")
-                Swatch.Parent          = el
+                Swatch.Parent           = el
                 Swatch.BackgroundColor3 = defColor
-                Swatch.Position        = UDim2.new(1, -80, 0.5, -10)
-                Swatch.Size            = UDim2.fromOffset(48, 20)
-                corner(Swatch, 6)
-                stroke(Swatch, theme.Border)
+                Swatch.AnchorPoint      = Vector2.new(1, 0.5)
+                Swatch.Position         = UDim2.new(1, -32, 0.5, 0)
+                Swatch.Size             = UDim2.fromOffset(48, 20)
+                corner(Swatch, 6); stroke(Swatch, theme.Border)
 
-                -- Picker panel (expands below)
+                elOrder = elOrder + 1
                 local Picker = Instance.new("Frame")
-                Picker.Parent          = SecInners
+                Picker.Parent           = SecInners
                 Picker.BackgroundColor3 = theme.Surface
-                Picker.Size            = UDim2.new(1, 0, 0, 0)
+                Picker.Size             = UDim2.new(1, 0, 0, 0)
                 Picker.ClipsDescendants = true
+                Picker.LayoutOrder      = elOrder
                 corner(Picker, 8)
 
                 local SatVal = Instance.new("ImageButton")
-                SatVal.Parent          = Picker
+                SatVal.Parent           = Picker
                 SatVal.BackgroundColor3 = Color3.new(1,1,1)
-                SatVal.Position        = UDim2.new(0, 10, 0, 8)
-                SatVal.Size            = UDim2.new(0.72, -14, 0, 78)
-                SatVal.Image           = "http://www.roblox.com/asset/?id=6523286724"
-                SatVal.AutoButtonColor = false
+                SatVal.Position         = UDim2.new(0, 10, 0, 8)
+                SatVal.Size             = UDim2.new(0.72, -14, 0, 78)
+                SatVal.Image            = "http://www.roblox.com/asset/?id=6523286724"
+                SatVal.AutoButtonColor  = false
                 corner(SatVal, 6)
 
+                -- SV cursor — FIX: AnchorPoint(0.5,0.5) — no manual offset needed
                 local SVCursor = Instance.new("Frame")
-                SVCursor.Parent          = SatVal
+                SVCursor.Parent           = SatVal
                 SVCursor.BackgroundColor3 = Color3.new(1,1,1)
-                SVCursor.Size            = UDim2.fromOffset(12, 12)
-                SVCursor.Position        = UDim2.new(s, -6, 1-v, -6)
-                corner(SVCursor, 6)
-                stroke(SVCursor, Color3.new(0,0,0), 1.5)
+                SVCursor.AnchorPoint      = Vector2.new(0.5, 0.5)
+                SVCursor.Size             = UDim2.fromOffset(12, 12)
+                SVCursor.Position         = UDim2.new(s, 0, 1-v, 0)
+                corner(SVCursor, 6); stroke(SVCursor, Color3.new(0,0,0), 1.5)
 
                 local HueBar = Instance.new("ImageButton")
-                HueBar.Parent          = Picker
+                HueBar.Parent           = Picker
                 HueBar.BackgroundColor3 = Color3.new(1,1,1)
-                HueBar.Position        = UDim2.new(0.72, 4, 0, 8)
-                HueBar.Size            = UDim2.new(0, 16, 0, 78)
-                HueBar.Image           = "http://www.roblox.com/asset/?id=6523291212"
-                HueBar.AutoButtonColor = false
+                HueBar.Position         = UDim2.new(0.72, 4, 0, 8)
+                HueBar.Size             = UDim2.new(0, 16, 0, 78)
+                HueBar.Image            = "http://www.roblox.com/asset/?id=6523291212"
+                HueBar.AutoButtonColor  = false
                 corner(HueBar, 6)
 
+                -- Hue cursor — FIX: AnchorPoint(0.5,0.5)
                 local HueCursor = Instance.new("Frame")
-                HueCursor.Parent          = HueBar
+                HueCursor.Parent           = HueBar
                 HueCursor.BackgroundColor3 = Color3.new(1,1,1)
-                HueCursor.AnchorPoint     = Vector2.new(0.5, 0)
-                HueCursor.Size            = UDim2.fromOffset(16, 8)
-                HueCursor.Position        = UDim2.new(0.5, 0, h, -4)
-                corner(HueCursor, 4)
-                stroke(HueCursor, Color3.new(0,0,0), 1)
+                HueCursor.AnchorPoint      = Vector2.new(0.5, 0.5)
+                HueCursor.Size             = UDim2.fromOffset(16, 8)
+                HueCursor.Position         = UDim2.new(0.5, 0, h, 0)
+                corner(HueCursor, 4); stroke(HueCursor, Color3.new(0,0,0), 1)
 
                 local function updateColor()
-                    local realColor = Color3.fromHSV(h, s, v)
-                    Swatch.BackgroundColor3 = realColor
-                    callback(realColor)
+                    local c = Color3.fromHSV(h, s, v)
+                    Swatch.BackgroundColor3 = c; callback(c)
                 end
 
                 local svDown, hueDown = false, false
-
-                SatVal.MouseButton1Down:Connect(function() svDown = true end)
+                SatVal.MouseButton1Down:Connect(function() svDown  = true end)
                 HueBar.MouseButton1Down:Connect(function() hueDown = true end)
                 uis.InputEnded:Connect(function(inp)
-                    if inp.UserInputType == Enum.UserInputType.MouseButton1 then
-                        svDown, hueDown = false, false
-                    end
+                    if inp.UserInputType == Enum.UserInputType.MouseButton1 then svDown=false; hueDown=false end
                 end)
                 mouse.Move:Connect(function()
                     if svDown then
                         local px = math.clamp((mouse.X - SatVal.AbsolutePosition.X)/SatVal.AbsoluteSize.X, 0, 1)
                         local py = math.clamp((mouse.Y - SatVal.AbsolutePosition.Y)/SatVal.AbsoluteSize.Y, 0, 1)
                         s = px; v = 1 - py
-                        SVCursor.Position = UDim2.new(px, -6, py, -6)
+                        SVCursor.Position = UDim2.new(px, 0, py, 0)  -- FIX: no manual offset
                         updateColor()
                     end
                     if hueDown then
                         local py = math.clamp((mouse.Y - HueBar.AbsolutePosition.Y)/HueBar.AbsoluteSize.Y, 0, 1)
                         h = py
-                        HueCursor.Position = UDim2.new(0.5, 0, py, -4)
+                        HueCursor.Position = UDim2.new(0.5, 0, py, 0)  -- FIX: no manual offset
                         updateColor()
                     end
                 end)
@@ -1278,25 +1147,13 @@ function Kavo.CreateLib(libName, themeInput)
                 el.MouseButton1Click:Connect(function()
                     if not focusing then
                         colorOpen = not colorOpen
-                        Picker:TweenSize(
-                            colorOpen and UDim2.new(1,0,0,96) or UDim2.new(1,0,0,0),
-                            "InOut", "Quart", 0.2, true
-                        )
-                        task.wait(0.22)
-                        syncSizes()
-                        task.spawn(ripple, el, theme)
+                        Picker:TweenSize(colorOpen and UDim2.new(1,0,0,96) or UDim2.new(1,0,0,0), "InOut","Quart",0.2,true)
+                        task.wait(0.22); syncSizes(); task.spawn(ripple, el, theme)
                     end
                 end)
-
                 local tooltip = makeTooltip(tip)
                 infoBtn.MouseButton1Click:Connect(function() showTooltip(tooltip) end)
-
-                task.spawn(function()
-                    while task.wait(0) do
-                        Picker.BackgroundColor3 = theme.Surface
-                    end
-                end)
-
+                task.spawn(function() while task.wait(0) do Picker.BackgroundColor3 = theme.Surface end end)
                 syncSizes()
             end
 
@@ -1304,7 +1161,6 @@ function Kavo.CreateLib(libName, themeInput)
         end
         return Sections
     end
-
     return Tabs
 end
 
