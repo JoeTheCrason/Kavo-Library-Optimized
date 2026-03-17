@@ -210,9 +210,8 @@ function Kavo.CreateLib(libName, themeInput)
     Main.Name             = "Main"
     Main.Parent           = ScreenGui
     Main.BackgroundColor3 = theme.Background
-    Main.ClipsDescendants = true
-    -- FIX: AnchorPoint(0.5,0.5) + Position(0.5,0,0.5,0) centers on ANY resolution.
-    --      The old pattern UDim2.new(0.5,-270,0.5,-165) only works at exactly 1080p.
+    -- ClipsDescendants intentionally NOT set here — it would clip UICorner on child frames,
+    -- causing the bottom corners of Sidebar/InfoBar to appear square.
     Main.AnchorPoint      = Vector2.new(0.5, 0.5)
     Main.Position         = UDim2.new(0.5, 0, 0.5, 0)
     Main.Size             = UDim2.fromOffset(540, 330)
@@ -361,6 +360,7 @@ function Kavo.CreateLib(libName, themeInput)
     PagesHolder.Name                   = "PagesHolder"
     PagesHolder.Parent                 = Main
     PagesHolder.BackgroundTransparency = 1
+    PagesHolder.ClipsDescendants       = true   -- clip page scroll content, not the window corners
     PagesHolder.Position               = UDim2.new(0, 148, 0, 32)
     PagesHolder.Size                   = UDim2.new(1, -148, 1, -64)
 
@@ -720,7 +720,11 @@ function Kavo.CreateLib(libName, themeInput)
             function Elements:NewToggle(tname, tip, callback)
                 tname = tname or "Toggle"; tip = tip or ""; callback = callback or function() end
                 local toggled = false
-                local el, ic, lb, infoBtn = makeBaseElement("rbxassetid://3926309567", Vector2.new(628,420), Vector2.new(48,48))
+                -- Pass nil icon — we don't want the old circle toggle image;
+                -- the Track/Thumb below IS the toggle indicator.
+                local el, ic, lb, infoBtn = makeBaseElement(nil, nil, nil)
+                -- Hide the generic icon placeholder; toggle state is shown by Track/Thumb
+                ic.Visible = false
                 lb.Text = tname
 
                 -- Track — FIX: AnchorPoint(1,0.5) right-centers it; no manual offset math
