@@ -41,12 +41,16 @@ local function watchTheme(obj, prop, getValueFn)
 end
 
 RunService.Heartbeat:Connect(function()
+    local dead = {}
     for obj, w in next, themeWatchers do
         if obj and obj.Parent then
             obj[w.prop] = w.fn()
         else
-            themeWatchers[obj] = nil   -- clean up destroyed objects
+            dead[#dead + 1] = obj
         end
+    end
+    for _, obj in ipairs(dead) do
+        themeWatchers[obj] = nil
     end
 end)
 
@@ -107,17 +111,12 @@ local function hookHover(btn, themeRef, focusing)
             hovering = false
         end
     end)
-    -- Keep bg in sync while not hovering (replaces the per-element coroutine)
-    watchTheme(btn, "BackgroundColor3", function()
-        if hovering then return btn.BackgroundColor3 end
-        return themeRef().ElementColor
-    end)
     return function() return hovering end
 end
 
 -- ViewInfo tooltip (was copy-pasted for every element type).
 local function hookViewInfo(viewInfo, moreInfo, btn, blurFrame, infoContainer,
-                             themeRef, focusingRef, setFocusing, viewDeRef, setViewDe)
+                             themeRef, setFocusing, viewDeRef, setViewDe)
     viewInfo.MouseButton1Click:Connect(function()
         if viewDeRef() then return end
         setViewDe(true)
@@ -686,8 +685,7 @@ function Kavo.CreateLib(kavName, themeList)
 
                 hookHover(buttonElement, getTheme, getFocusing)
                 hookViewInfo(viewInfo, moreInfo, buttonElement, blurFrame,
-                             infoContainer, getTheme, getViewDe, setFocusing,
-                             getViewDe, setViewDe)
+                             infoContainer, getTheme, setFocusing, getViewDe, setViewDe)
 
                 buttonElement.MouseButton1Click:Connect(function()
                     if not focusing then
@@ -703,7 +701,7 @@ function Kavo.CreateLib(kavName, themeList)
             end
 
             -- ── Textbox ──────────────────────────────────────────────────────
-            function Elements:NewTextbox(tname, tTip, callback)
+            function Elements:NewTextBox(tname, tTip, callback)
                 tname    = tname    or "Textbox"
                 tTip     = tTip     or "Tip: Enter text and press enter."
                 callback = callback or function() end
@@ -770,8 +768,7 @@ function Kavo.CreateLib(kavName, themeList)
 
                 hookHover(textboxElement, getTheme, getFocusing)
                 hookViewInfo(viewInfo, moreInfo, textboxElement, blurFrame,
-                             infoContainer, getTheme, getViewDe, setFocusing,
-                             getViewDe, setViewDe)
+                             infoContainer, getTheme, setFocusing, getViewDe, setViewDe)
 
                 textboxElement.MouseButton1Click:Connect(function()
                     if focusing then
@@ -863,8 +860,7 @@ function Kavo.CreateLib(kavName, themeList)
 
                 hookHover(toggleElement, getTheme, getFocusing)
                 hookViewInfo(viewInfo, moreInfo, toggleElement, blurFrame,
-                             infoContainer, getTheme, getViewDe, setFocusing,
-                             getViewDe, setViewDe)
+                             infoContainer, getTheme, setFocusing, getViewDe, setViewDe)
 
                 toggleElement.MouseButton1Click:Connect(function()
                     if not focusing then
@@ -996,8 +992,7 @@ function Kavo.CreateLib(kavName, themeList)
 
                 hookHover(sliderElement, getTheme, getFocusing)
                 hookViewInfo(viewInfo, moreInfo, sliderElement, blurFrame,
-                             infoContainer, getTheme, getViewDe, setFocusing,
-                             getViewDe, setViewDe)
+                             infoContainer, getTheme, setFocusing, getViewDe, setViewDe)
 
                 local moveconnection, releaseconnection
                 local function calcValue()
@@ -1114,8 +1109,7 @@ function Kavo.CreateLib(kavName, themeList)
 
                 hookHover(dropOpen, getTheme, getFocusing)
                 hookViewInfo(viewInfo, moreInfo, dropOpen, blurFrame,
-                             infoContainer, getTheme, getViewDe, setFocusing,
-                             getViewDe, setViewDe)
+                             infoContainer, getTheme, setFocusing, getViewDe, setViewDe)
 
                 -- Shared option builder (used by both initial build and Refresh)
                 local function addOption(v)
@@ -1277,8 +1271,7 @@ function Kavo.CreateLib(kavName, themeList)
 
                 hookHover(keybindElement, getTheme, getFocusing)
                 hookViewInfo(viewInfo, moreInfo, keybindElement, blurFrame,
-                             infoContainer, getTheme, getViewDe, setFocusing,
-                             getViewDe, setViewDe)
+                             infoContainer, getTheme, setFocusing, getViewDe, setViewDe)
 
                 keybindElement.MouseButton1Click:Connect(function()
                     if not focusing then
@@ -1494,8 +1487,7 @@ function Kavo.CreateLib(kavName, themeList)
 
                 hookHover(colorElement, getTheme, getFocusing)
                 hookViewInfo(viewInfo, moreInfo, colorHeader, blurFrame,
-                             infoContainer, getTheme, getViewDe, setFocusing,
-                             getViewDe, setViewDe)
+                             infoContainer, getTheme, setFocusing, getViewDe, setViewDe)
 
                 colorElement.MouseButton1Click:Connect(function()
                     if not focusing then
